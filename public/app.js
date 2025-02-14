@@ -102,7 +102,7 @@ function initChart() {
                 },
                 title: {
                     display: true,
-                    text: 'Historical Data',
+                    text: '',
                     color: 'rgba(255, 255, 255, 0.8)',
                     font: {
                         family: 'Orbitron',

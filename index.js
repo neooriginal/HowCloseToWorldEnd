@@ -222,8 +222,7 @@ async function initializeDB() {
 
         const UPDATE_INTERVAL = 6 * 60 * 60 * 1000; // 6 hours in milliseconds
         setInterval(main, UPDATE_INTERVAL);
-
-        main();
+        
         server.listen(3000, () => {
             console.log('Server is running on port 3000');
             console.log('API documentation available at /docs');
