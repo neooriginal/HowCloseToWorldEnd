@@ -2,6 +2,8 @@
 
 A real-time AI-powered dashboard that analyzes global news to estimate how close we are to potential world-ending scenarios. The system uses advanced AI to process current events and calculate a probability score, providing insights into global stability.
 
+![image](https://github.com/user-attachments/assets/cf36a1b5-3747-448b-800e-83ea6cfc1d91)
+
 
 ## 🌟 Features
 
@@ -109,4 +111,6 @@ This project is licensed under a custom license that allows personal use and sel
 ## 📧 Contact
 
 For questions and support, please use the [GitHub Issues](https://github.com/Neotastisch/HowCloseToWorldEnd/issues) page.
+
+Made with <3 by Neo
  
