@@ -12,6 +12,9 @@ const swaggerUi = require('swagger-ui-express');
 dotenv.config();
 
 const app = express();
+// Enable trust proxy - this is required when behind a reverse proxy like Nginx
+app.set('trust proxy', 1);
+
 const server = http.createServer(app);
 const io = socketIo(server);
 
@@ -19,9 +22,13 @@ const io = socketIo(server);
 const apiLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
     max: 100, // Limit each IP to 100 requests per windowMs
+    standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+    legacyHeaders: false, // Disable the `X-RateLimit-*` headers
     message: {
         error: 'Too many requests from this IP, please try again later.'
-    }
+    },
+    // Ensure consistent rate limiting in production
+    trustProxy: true
 });
 
 // API documentation
