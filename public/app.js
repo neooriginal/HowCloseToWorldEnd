@@ -156,13 +156,20 @@ function updateTrendIndicator(currentValue, previousValue) {
 // Function to update the next update countdown
 function updateNextUpdateCountdown() {
     const now = moment();
-    const nextHour = moment().startOf('hour').add(1, 'hour');
-    const duration = moment.duration(nextHour.diff(now));
+    const currentHour = now.hour();
+    const nextUpdateHour = Math.ceil(currentHour / 6) * 6;
+    const nextUpdate = moment().startOf('hour').hour(nextUpdateHour);
     
-    const minutes = Math.floor(duration.asMinutes());
+    if (nextUpdate.isBefore(now)) {
+        nextUpdate.add(6, 'hours');
+    }
+    
+    const duration = moment.duration(nextUpdate.diff(now));
+    const hours = Math.floor(duration.asHours());
+    const minutes = Math.floor(duration.minutes());
     const seconds = Math.floor(duration.seconds());
     
-    nextUpdateElement.textContent = `${minutes}m ${seconds}s`;
+    nextUpdateElement.textContent = `${hours}h ${minutes}m ${seconds}s`;
 }
 
 // Start the countdown timer

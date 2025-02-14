@@ -1,16 +1,29 @@
-MIT License
+Custom License for How Close To World End
 
-Copyright (c) 2025 Neo
+Copyright (c) 2025 Neotastisch
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+in the Software with the following restrictions:
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+1. The Software may be used for personal and non-commercial purposes only.
+2. You are allowed to:
+   - Use the software for personal purposes
+   - Modify the software for personal use
+   - Self-host the software for non-commercial purposes
+   - Share modifications with proper attribution
+
+3. You are NOT allowed to:
+   - Use the software for commercial purposes
+   - Sell the software or modifications of it
+   - Remove or modify the copyright notice
+   - Use the software in any way that suggests endorsement
+   - Use the project's name "How Close To World End" for derivative works
+
+4. Attribution Requirements:
+   - You must give appropriate credit to the original author
+   - You must indicate if changes were made
+   - You must provide a link to this license
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
