@@ -4,8 +4,6 @@ A real-time AI-powered dashboard that analyzes global news to estimate how close
 
 ![image](https://github.com/user-attachments/assets/cf36a1b5-3747-448b-800e-83ea6cfc1d91)
 
-![image](https://github.com/Neotastisch/HowCloseToWorldEnd/blob/main/public/logo.jpg)
-
 ## 🌟 Features
 
 - 🤖 AI-powered analysis of global news
