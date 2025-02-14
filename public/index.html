@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Close To World End</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
+</head>
+<body>
+    <div class="glow-background"></div>
+    <div class="container">
+        <div class="disclaimer">
+            ⚠️ This is an AI-generated probability based on current news. Values are speculative and should not cause panic.
+        </div>
+        
+        <div class="gauge-container">
+            <div class="scale-indicator left">
+                <span class="value">0%</span>
+                <span class="label">World Peace</span>
+            </div>
+            <div class="gauge">
+                <div class="gauge-ring"></div>
+                <div class="gauge-value">
+                    <span id="percentage">--</span>%
+                </div>
+                <div class="gauge-label">World End Probability</div>
+            </div>
+            <div class="scale-indicator right">
+                <span class="value">100%</span>
+                <span class="label">Total Destruction</span>
+            </div>
+            <div class="update-info">
+                <div class="last-update">
+                    Last updated: <span id="last-update">--</span>
+                </div>
+                <div class="next-update">
+                    Next update in: <span id="next-update">--</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="info-container">
+            <div class="chart-container glass-panel">
+                <div class="panel-header">
+                    <h2>Historical Data</h2>
+                    <div class="trend-indicator">
+                        <span class="trend-arrow">↑</span>
+                        <span class="trend-value">0%</span>
+                    </div>
+                </div>
+                <canvas id="historyChart"></canvas>
+            </div>
+            
+            <div class="reasoning-container glass-panel">
+                <div class="panel-header">
+                    <h2>Latest Analysis</h2>
+                    <div class="severity-badge">MONITORING</div>
+                </div>
+                <div class="scrollable-content">
+                    <div class="news-summary">
+                        <h3>News Summary</h3>
+                        <p id="news-summary">Loading...</p>
+                    </div>
+                    <div class="reasoning">
+                        <h3>Reasoning</h3>
+                        <p id="reasoning">Loading...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <footer class="glass-panel">
+        <div class="footer-content">
+            <div class="footer-links">
+                <a href="https://github.com/yourusername/HowCloseToWorldEnd" target="_blank">GitHub</a>
+                <span class="separator">|</span>
+                <a href="/privacy.html">Privacy Policy</a>
+            </div>
+            <div class="footer-disclaimer">
+                Updates every hour • Not affiliated with any government organization
+            </div>
+        </div>
+    </footer>
+    <div id="background-effects"></div>
+    <script src="app.js"></script>
+</body>
+</html> 
