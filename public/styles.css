@@ -175,11 +175,32 @@ body {
     margin-bottom: 1.5rem;
 }
 
+.stats {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
 .trend-indicator {
     display: flex;
     align-items: center;
     gap: 0.5rem;
     font-family: 'Orbitron', sans-serif;
+}
+
+.max-indicator {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.9);
+    padding: 0.3rem 0.8rem;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.max-value {
+    font-weight: bold;
+    color: var(--warning-color);
 }
 
 .trend-arrow {
@@ -418,6 +439,15 @@ footer {
     .trend-indicator {
         font-size: 0.8rem;
     }
+
+    .stats {
+        gap: 1rem;
+    }
+
+    .max-indicator {
+        font-size: 0.8rem;
+        padding: 0.2rem 0.6rem;
+    }
 }
 
 @media (max-width: 480px) {
@@ -452,6 +482,12 @@ footer {
 
     .footer-disclaimer {
         font-size: 0.8rem;
+    }
+
+    .stats {
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 0.5rem;
     }
 }
 

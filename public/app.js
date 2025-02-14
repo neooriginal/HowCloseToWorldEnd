@@ -13,10 +13,12 @@ const severityBadge = document.querySelector('.severity-badge');
 const trendArrow = document.querySelector('.trend-arrow');
 const trendValue = document.querySelector('.trend-value');
 const nextUpdateElement = document.getElementById('next-update');
+const maxValueElement = document.querySelector('.max-value');
 
 // Chart initialization
 let historyChart;
 const ctx = document.getElementById('historyChart').getContext('2d');
+let maxEverValue = 0;
 
 // Function to update the gauge color based on percentage
 function updateGaugeColor(percentage) {
@@ -96,11 +98,20 @@ function initChart() {
             },
             plugins: {
                 legend: {
-                    labels: {
-                        color: 'rgba(255, 255, 255, 0.8)',
-                        font: {
-                            family: 'Orbitron'
-                        }
+                    display: false // Hide the legend since we have a title
+                },
+                title: {
+                    display: true,
+                    text: 'Historical Data',
+                    color: 'rgba(255, 255, 255, 0.8)',
+                    font: {
+                        family: 'Orbitron',
+                        size: 16,
+                        weight: 'bold'
+                    },
+                    padding: {
+                        top: 10,
+                        bottom: 20
                     }
                 }
             },
@@ -222,6 +233,14 @@ function updateChart(percentage, timestamp) {
     historyChart.data.labels.push(label);
     historyChart.data.datasets[0].data.push(percentage);
     
+    // Update max value if necessary
+    if (percentage > maxEverValue) {
+        maxEverValue = percentage;
+        if (maxValueElement) {
+            maxValueElement.textContent = `${maxEverValue}%`;
+        }
+    }
+    
     // Keep only last 10 data points
     if (historyChart.data.labels.length > 10) {
         historyChart.data.labels.shift();
@@ -256,39 +275,73 @@ style.textContent = `
 }`;
 document.head.appendChild(style);
 
-// Socket event handlers
-socket.on('update', (data) => {
-    updateDisplay(data.probability, data.news_summary, data.reasoning, new Date(data.timestamp));
-    updateChart(data.probability, new Date(data.timestamp));
-});
-
 // Initialize the application
 async function init() {
     initChart();
     updateNextUpdateCountdown();
     
     try {
-        const response = await fetch('/api/latest');
+        // Fetch initial data
+        const response = await fetch('/api/history');
         const history = await response.json();
         
-        if (history.length > 0) {
+        if (history && history.length > 0) {
             const latest = history[0];
-            updateDisplay(latest.worldend, latest.news, latest.reasoning, new Date(latest.date));
+            
+            // Find max value in history
+            maxEverValue = Math.max(...history.map(entry => entry.worldend));
+            if (maxValueElement) {
+                maxValueElement.textContent = `${maxEverValue}%`;
+            }
+            
+            // Update the display with the latest data
+            updateDisplay(
+                latest.worldend,
+                latest.news,
+                latest.reasoning,
+                new Date(latest.date)
+            );
             
             // Update chart with historical data
             history.reverse().forEach(entry => {
                 updateChart(entry.worldend, new Date(entry.date));
             });
             
-            // Update trend with the last two entries
+            // Update trend with the last two entries if available
             if (history.length >= 2) {
-                updateTrendIndicator(history[0].worldend, history[1].worldend);
+                updateTrendIndicator(
+                    history[history.length - 1].worldend,
+                    history[history.length - 2].worldend
+                );
             }
+        } else {
+            console.log('No historical data available');
+            // Set default values or show loading state
+            percentageElement.textContent = '--';
+            newsSummaryElement.textContent = 'Waiting for initial data...';
+            reasoningElement.textContent = 'Analyzing global news...';
+            lastUpdateElement.textContent = '--';
         }
     } catch (error) {
         console.error('Failed to fetch initial data:', error);
+        // Show error state
+        percentageElement.textContent = '--';
+        newsSummaryElement.textContent = 'Error loading data';
+        reasoningElement.textContent = 'Please try refreshing the page';
+        lastUpdateElement.textContent = '--';
     }
 }
+
+// Socket event handlers
+socket.on('update', (data) => {
+    updateDisplay(
+        data.probability,
+        data.news_summary,
+        data.reasoning,
+        new Date(data.timestamp)
+    );
+    updateChart(data.probability, new Date(data.timestamp));
+});
 
 // Initialize the application
 init(); 

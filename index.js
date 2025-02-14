@@ -153,93 +153,149 @@ const openai = new openai_lib({
     baseURL: 'https://openrouter.ai/api/v1',
 });
 
+// Add connection pool instead of single connection for better scalability
+const pool = mysql.createPool({
+    host: process.env.DB_HOST,
+    port: process.env.DB_PORT,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0
+});
+
+// Track last successful AI update
+let lastAIUpdate = null;
+const MIN_AI_INTERVAL = 30 * 60 * 1000; // 30 minutes minimum between AI calls
+
 async function getNews(){
-    const response = await axios.get('https://newsapi.org/v2/top-headlines', {
-        params: {
-            apiKey: process.env.NEWS_API_KEY,
-            language: 'en',
-            sortBy: 'publishedAt',
+    try {
+        // Check if enough time has passed since last update
+        if (lastAIUpdate && Date.now() - lastAIUpdate < MIN_AI_INTERVAL) {
+            console.log('Skipping news fetch - too soon since last update');
+            return false;
         }
-    });
-    if(lastNews == response.data){
+
+        const response = await axios.get('https://newsapi.org/v2/top-headlines', {
+            params: {
+                apiKey: process.env.NEWS_API_KEY,
+                language: 'en',
+                sortBy: 'publishedAt',
+            }
+        });
+
+        // Compare with last news to avoid unnecessary AI calls
+        if (lastNews && JSON.stringify(lastNews) === JSON.stringify(response.data)) {
+            console.log('Skipping AI update - no new news');
+            return false;
+        }
+
+        lastNews = response.data;
+        let toText = "";
+        for (const article of response.data.articles) {
+            if (article.title && (article.description || article.content)) {
+                toText += `${article.title}\n${article.description || ''}\n${article.content || ''}\n\n`;
+            }
+        }
+        return toText || false;
+    } catch (error) {
+        console.error('Error fetching news:', error);
         return false;
     }
-    lastNews = response.data;
-    let toText = "";
-    for(let i = 0; i < response.data.articles.length; i++){
-        toText += `${response.data.articles[i].title}\n${response.data.articles[i].description}\n${response.data.articles[i].content}\n\n`;
-    }
-    return toText;
 }
 
 async function initializeDB() {
-    connection = await mysql.createConnection({
-        host: process.env.DB_HOST,
-        port: process.env.DB_PORT,
-        user: process.env.DB_USER,
-        password: process.env.DB_PASSWORD,
-        database: process.env.DB_NAME
-    });
+    try {
+        // Test database connection
+        await pool.query('SELECT 1');
+        console.log('Database connection successful');
 
-    await connection.query(`CREATE TABLE IF NOT EXISTS history (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        news TEXT,
-        worldend INT,
-        reasoning TEXT,
-        date DATETIME DEFAULT CURRENT_TIMESTAMP
-    )`);
+        await pool.query(`CREATE TABLE IF NOT EXISTS history (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            news TEXT,
+            worldend INT,
+            reasoning TEXT,
+            date DATETIME DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_date (date)
+        )`);
 
-    const UPDATE_INTERVAL = 6 * 60 * 60 * 1000; // 6 hours in milliseconds
-    setInterval(main, UPDATE_INTERVAL);
+        const UPDATE_INTERVAL = 6 * 60 * 60 * 1000; // 6 hours in milliseconds
+        setInterval(main, UPDATE_INTERVAL);
 
-    main();
-    server.listen(3000, () => {
-        console.log('Server is running on port 3000');
-        console.log('API documentation available at /docs');
-    });
-}
-
-async function saveWorldEnd(worldend, news, reasoning){
-    // Convert worldend to a number and ensure it's within valid range
-    const worldendValue = parseFloat(worldend);
-    if (isNaN(worldendValue)) {
-        throw new Error('Invalid worldend value');
+        main();
+        server.listen(3000, () => {
+            console.log('Server is running on port 3000');
+            console.log('API documentation available at /docs');
+        });
+    } catch (error) {
+        console.error('Database initialization failed:', error);
+        process.exit(1);
     }
-    // Round to 2 decimal places to avoid any floating point issues
-    const normalizedWorldend = Math.min(Math.max(Math.round(worldendValue * 100) / 100, 0), 100);
-    
-    await connection.query(`INSERT INTO history (worldend, news, reasoning) VALUES (?, ?, ?)`, 
-        [normalizedWorldend, news, reasoning]);
 }
 
-async function getWorldEnd(){
-    //get last 10 decisions
-    const [rows] = await connection.query(`SELECT * FROM history ORDER BY date DESC LIMIT 10`);
-    return rows;
+async function saveWorldEnd(worldend, news, reasoning) {
+    try {
+        // Convert worldend to a number and ensure it's within valid range
+        const worldendValue = parseFloat(worldend);
+        if (isNaN(worldendValue)) {
+            throw new Error('Invalid worldend value');
+        }
+        // Round to 2 decimal places and ensure it's within bounds
+        const normalizedWorldend = Math.min(Math.max(Math.round(worldendValue * 100) / 100, 0), 100);
+        
+        // Use prepared statement for SQL injection prevention
+        await pool.query(
+            'INSERT INTO history (worldend, news, reasoning) VALUES (?, ?, ?)', 
+            [normalizedWorldend, news, reasoning]
+        );
+        
+        // Update last AI update timestamp
+        lastAIUpdate = Date.now();
+    } catch (error) {
+        console.error('Error saving world end data:', error);
+        throw error;
+    }
 }
 
-// API endpoints
+async function getWorldEnd() {
+    try {
+        // Use prepared statement with proper limit
+        const [rows] = await pool.query(
+            'SELECT * FROM history ORDER BY date DESC LIMIT ?',
+            [10]
+        );
+        return rows;
+    } catch (error) {
+        console.error('Error fetching world end data:', error);
+        throw error;
+    }
+}
+
+// API endpoints with prepared statements
 app.get('/api/latest', async (req, res) => {
     try {
-        const [rows] = await connection.query(
+        const [rows] = await pool.query(
             'SELECT * FROM history ORDER BY date DESC LIMIT 1'
         );
         res.json(rows[0] || { error: 'No data available' });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error('Error in /api/latest:', error);
+        res.status(500).json({ error: 'Internal server error' });
     }
 });
 
 app.get('/api/history', async (req, res) => {
     try {
-        const limit = Math.min(parseInt(req.query.limit) || 10, 100);
-        const [rows] = await connection.query(
+        const limit = Math.min(Math.max(parseInt(req.query.limit) || 10, 1), 100);
+        const [rows] = await pool.query(
             'SELECT * FROM history ORDER BY date DESC LIMIT ?',
             [limit]
         );
         res.json(rows);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error('Error in /api/history:', error);
+        res.status(500).json({ error: 'Internal server error' });
     }
 });
 
@@ -256,6 +312,7 @@ async function calculateWorldEnd(news){
     const prompt = `
     you will be given news articles. based on the articles, respond with a % of how close the world is to extinguishing (0% = world piece, 100% = all icmbs launched). be very critical and think about it.
     This can include climate, natural disasters, politics, space events, etc. only evaluate the news article if it happened right now (and not in the future / past)
+    You shouldnt go over 75% if its not a big event or dangerous event.
 
     History of decisions:
     ${history.map(h => `${h.date}: ${h.worldend} - ${h.news}`).join("\n")}
@@ -314,8 +371,17 @@ async function calculateWorldEnd(news){
 }
 
 async function main(){
-    const news = await getNews();
-    const worldend = await calculateWorldEnd(news);
+    try {
+        const news = await getNews();
+        if (news) {
+            const worldend = await calculateWorldEnd(news);
+            console.log('AI update completed successfully');
+        } else {
+            console.log('Skipping AI update - no new data or too soon');
+        }
+    } catch (error) {
+        console.error('Error in main loop:', error);
+    }
 }
 
 initializeDB();
