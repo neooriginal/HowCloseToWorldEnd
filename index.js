@@ -211,12 +211,7 @@ async function initializeDB() {
         await pool.query('SELECT 1');
         console.log('Database connection successful');
 
-        // Drop the existing table if it exists
-        await pool.query('DROP TABLE IF EXISTS history');
-        console.log('Dropped existing history table');
-
-        // Create a fresh table
-        await pool.query(`CREATE TABLE history (
+        await pool.query(`CREATE TABLE IF NOT EXISTS history (
             id INT AUTO_INCREMENT PRIMARY KEY,
             news TEXT,
             worldend INT,
@@ -224,13 +219,9 @@ async function initializeDB() {
             date DATETIME DEFAULT CURRENT_TIMESTAMP,
             INDEX idx_date (date)
         )`);
-        console.log('Created fresh history table');
 
         const UPDATE_INTERVAL = 6 * 60 * 60 * 1000; // 6 hours in milliseconds
         setInterval(main, UPDATE_INTERVAL);
-        
-        // Run initial update
-        main();
         
         server.listen(3000, () => {
             console.log('Server is running on port 3000');
