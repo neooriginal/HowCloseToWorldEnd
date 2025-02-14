@@ -98,11 +98,11 @@ function initChart() {
             },
             plugins: {
                 legend: {
-                    display: false // Hide the legend since we have a title
+                    display: false
                 },
                 title: {
                     display: true,
-                    text: '',
+                    text: 'Historical Data (7-Day Average)',
                     color: 'rgba(255, 255, 255, 0.8)',
                     font: {
                         family: 'Orbitron',
@@ -112,6 +112,16 @@ function initChart() {
                     padding: {
                         top: 10,
                         bottom: 20
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        title: function(context) {
+                            return moment(context[0].label).format('MMMM D, YYYY');
+                        },
+                        label: function(context) {
+                            return `Average: ${context.raw}%`;
+                        }
                     }
                 }
             },
@@ -137,12 +147,18 @@ function initChart() {
                         color: 'rgba(255, 255, 255, 0.8)',
                         font: {
                             family: 'Orbitron'
+                        },
+                        maxRotation: 45,
+                        minRotation: 45,
+                        callback: function(value, index, values) {
+                            return moment(this.getLabelForValue(value)).format('MMM D');
                         }
                     }
                 }
             }
         }
     });
+    historyChart._meta = { dailyCount: {} };
 }
 
 // Update trend indicator
@@ -228,10 +244,29 @@ function updateDisplay(percentage, newsSummary, reasoning, timestamp) {
 
 // Update the chart with new data
 function updateChart(percentage, timestamp) {
-    const label = moment(timestamp).format('HH:mm');
+    if (!historyChart) return;
     
-    historyChart.data.labels.push(label);
-    historyChart.data.datasets[0].data.push(percentage);
+    const date = moment(timestamp).format('YYYY-MM-DD');
+    
+    // Find existing data point for this date
+    const existingIndex = historyChart.data.labels.findIndex(label => label === date);
+    
+    if (existingIndex !== -1) {
+        // Update existing data point with new average
+        const currentData = historyChart.data.datasets[0].data[existingIndex];
+        const currentCount = historyChart._meta.dailyCount?.[existingIndex] || 1;
+        const newAverage = ((currentData * currentCount) + percentage) / (currentCount + 1);
+        
+        historyChart.data.datasets[0].data[existingIndex] = Math.round(newAverage * 10) / 10;
+        historyChart._meta.dailyCount = historyChart._meta.dailyCount || {};
+        historyChart._meta.dailyCount[existingIndex] = currentCount + 1;
+    } else {
+        // Add new data point
+        historyChart.data.labels.push(date);
+        historyChart.data.datasets[0].data.push(percentage);
+        historyChart._meta.dailyCount = historyChart._meta.dailyCount || {};
+        historyChart._meta.dailyCount[historyChart.data.labels.length - 1] = 1;
+    }
     
     // Update max value if necessary
     if (percentage > maxEverValue) {
@@ -241,13 +276,21 @@ function updateChart(percentage, timestamp) {
         }
     }
     
-    // Keep only last 10 data points
-    if (historyChart.data.labels.length > 10) {
+    // Keep only last 7 days of data
+    while (historyChart.data.labels.length > 7) {
         historyChart.data.labels.shift();
         historyChart.data.datasets[0].data.shift();
+        // Shift the daily count metadata as well
+        const newDailyCount = {};
+        Object.keys(historyChart._meta.dailyCount).forEach(key => {
+            if (key > 0) {
+                newDailyCount[key - 1] = historyChart._meta.dailyCount[key];
+            }
+        });
+        historyChart._meta.dailyCount = newDailyCount;
     }
     
-    // Update trend indicator
+    // Update trend indicator using daily averages
     const dataPoints = historyChart.data.datasets[0].data;
     if (dataPoints.length >= 2) {
         updateTrendIndicator(
@@ -256,7 +299,7 @@ function updateChart(percentage, timestamp) {
         );
     }
     
-    historyChart.update();
+    historyChart.update('none'); // Update without animation for smoother transitions
 }
 
 // Add floating animation keyframes
@@ -277,12 +320,17 @@ document.head.appendChild(style);
 
 // Initialize the application
 async function init() {
-    initChart();
-    updateNextUpdateCountdown();
-    
     try {
+        // Initialize chart first
+        initChart();
+        updateNextUpdateCountdown();
+        
         // Fetch initial data
         const response = await fetch('/api/history');
+        if (!response.ok) {
+            throw new Error('Failed to fetch data');
+        }
+        
         const history = await response.json();
         
         if (history && history.length > 0) {
@@ -302,33 +350,36 @@ async function init() {
                 new Date(latest.date)
             );
             
-            // Update chart with historical data
-            history.reverse().forEach(entry => {
+            // Clear existing chart data
+            historyChart.data.labels = [];
+            historyChart.data.datasets[0].data = [];
+            
+            // Add historical data in chronological order
+            const chronologicalHistory = history.slice().reverse();
+            chronologicalHistory.forEach(entry => {
                 updateChart(entry.worldend, new Date(entry.date));
             });
             
             // Update trend with the last two entries if available
             if (history.length >= 2) {
                 updateTrendIndicator(
-                    history[history.length - 1].worldend,
-                    history[history.length - 2].worldend
+                    history[0].worldend,
+                    history[1].worldend
                 );
             }
         } else {
-            console.log('No historical data available');
-            // Set default values or show loading state
-            percentageElement.textContent = '--';
-            newsSummaryElement.textContent = 'Waiting for initial data...';
-            reasoningElement.textContent = 'Analyzing global news...';
-            lastUpdateElement.textContent = '--';
+            throw new Error('No historical data available');
         }
     } catch (error) {
-        console.error('Failed to fetch initial data:', error);
+        console.error('Failed to initialize:', error);
         // Show error state
         percentageElement.textContent = '--';
         newsSummaryElement.textContent = 'Error loading data';
         reasoningElement.textContent = 'Please try refreshing the page';
         lastUpdateElement.textContent = '--';
+        
+        // Retry initialization after 5 seconds
+        setTimeout(init, 5000);
     }
 }
 

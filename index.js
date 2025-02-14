@@ -312,6 +312,7 @@ async function calculateWorldEnd(news){
     you will be given news articles. based on the articles, respond with a % of how close the world is to extinguishing (0% = world piece, 100% = all icmbs launched). be very critical and think about it.
     This can include climate, natural disasters, politics, space events, etc. only evaluate the news article if it happened right now (and not in the future / past)
     You shouldnt go over 75% if its not a big event or dangerous event.
+    ALSO, BE CONSISTENT. CHECK THE HISTORY AND BE CONSISTENT WITH THE EVALUATION CRITERIA.
 
     History of decisions:
     ${history.map(h => `${h.date}: ${h.worldend} - ${h.news}`).join("\n")}
