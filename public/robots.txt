@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+Allow: /privacy.html
+Allow: /docs
+Allow: /api/latest
+Allow: /api/history
+
+Sitemap: https://worldend.neoserver.dev/sitemap.xml
+
+# Crawl-delay to prevent overwhelming the server
+Crawl-delay: 1 

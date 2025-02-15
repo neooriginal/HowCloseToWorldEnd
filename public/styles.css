@@ -356,82 +356,133 @@ footer {
 @media (max-width: 768px) {
     .container {
         padding: 1rem;
+        max-width: 100%;
+        overflow-x: hidden;
     }
 
     .info-container {
         grid-template-columns: 1fr;
-        max-height: none;
-        margin-bottom: 8rem;
         gap: 1rem;
+        margin-bottom: 6rem;
+    }
+
+    .gauge-container {
+        flex-direction: column;
+        align-items: center;
+        gap: 1rem;
+        margin: 1rem 0 2rem 0;
+        padding: 0 1rem;
     }
 
     .chart-container, .reasoning-container {
-        min-height: 300px;
-        max-height: 350px;
-        overflow: hidden;
+        aspect-ratio: 16/9;
+        min-height: unset;
+        max-height: unset;
+        height: auto;
+        width: 100%;
     }
 
     .chart-container canvas {
-        height: calc(100% - 2.5rem) !important;
-        bottom: 0.5rem;
+        position: relative !important;
+        height: 100% !important;
+        width: 100% !important;
+        bottom: 0 !important;
     }
 
     .gauge {
-        width: 200px;
-        height: 200px;
-        margin: 1rem auto;
-    }
-
-    .gauge-value {
-        font-size: 2.5rem;
-    }
-
-    .gauge-label {
-        font-size: 0.9rem;
+        width: min(200px, 60vw);
+        height: min(200px, 60vw);
+        margin: 0;
     }
 
     .scale-indicator {
         flex-direction: row;
-        gap: 0.5rem;
-        margin: 0.5rem 0;
+        justify-content: center;
+        gap: 1rem;
+        width: 100%;
+        margin: 0;
+    }
+
+    .scale-indicator .value {
+        font-size: 0.9rem;
+    }
+
+    .scale-indicator .label {
+        font-size: 0.8rem;
     }
 
     .disclaimer {
         font-size: 0.8rem;
         padding: 0.75rem;
-        margin: 0.5rem;
+        margin: 0.5rem auto;
+        max-width: 90%;
     }
 
     .panel-header {
-        flex-direction: column;
-        gap: 0.5rem;
-        align-items: flex-start;
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.5rem;
+        margin-bottom: 1rem;
     }
 
     .stats {
-        width: 100%;
-        justify-content: space-between;
+        flex-direction: row;
+        align-items: center;
+        gap: 1rem;
+        flex-wrap: wrap;
     }
 
     .severity-badge {
-        align-self: flex-end;
+        padding: 0.4rem 0.8rem;
+        font-size: 0.7rem;
     }
 
     .scrollable-content {
-        max-height: 250px;
+        padding: 0.5rem;
+        max-height: calc(100% - 4rem);
+    }
+
+    .news-summary, .reasoning {
+        margin-bottom: 1.5rem;
     }
 
     h2 {
-        font-size: 1.4rem;
+        font-size: 1.2rem;
+        margin-bottom: 0;
     }
 
     h3 {
-        font-size: 1.1rem;
+        font-size: 1rem;
+        margin-bottom: 0.5rem;
+    }
+
+    p {
+        font-size: 0.9rem;
+        line-height: 1.5;
+        margin-bottom: 1rem;
+    }
+
+    .footer {
+        padding: 0.75rem;
     }
 
     .footer-content {
-        padding: 0.5rem;
+        flex-direction: column;
+        gap: 0.5rem;
+        text-align: center;
         font-size: 0.8rem;
+    }
+
+    .footer-links {
+        display: flex;
+        justify-content: center;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .separator {
+        margin: 0 0.5rem;
     }
 }
 
@@ -441,31 +492,39 @@ footer {
     }
 
     .gauge {
-        width: 180px;
-        height: 180px;
+        width: min(180px, 50vw);
+        height: min(180px, 50vw);
     }
 
     .gauge-value {
-        font-size: 2rem;
+        font-size: min(2rem, 6vw);
+    }
+
+    .gauge-label {
+        font-size: min(0.8rem, 3vw);
     }
 
     .stats {
-        flex-direction: column;
-        align-items: flex-start;
         gap: 0.5rem;
     }
 
     .trend-indicator, .max-indicator {
-        font-size: 0.8rem;
+        font-size: 0.75rem;
+        padding: 0.3rem 0.6rem;
     }
 
     .update-info {
-        font-size: 0.8rem;
+        font-size: 0.75rem;
+        text-align: center;
     }
 
-    .footer-content {
-        flex-direction: column;
-        gap: 0.5rem;
+    .disclaimer {
+        font-size: 0.75rem;
+        padding: 0.5rem;
+    }
+
+    .disclaimer::before {
+        font-size: 1rem;
     }
 }
 
