@@ -365,10 +365,10 @@ footer {
         gap: 1rem;
     }
 
-    .chart-container {
+    .chart-container, .reasoning-container {
         min-height: 300px;
         max-height: 350px;
-        padding-bottom: 0.5rem;
+        overflow: hidden;
     }
 
     .chart-container canvas {
@@ -376,26 +376,10 @@ footer {
         bottom: 0.5rem;
     }
 
-    .reasoning-container {
-        min-height: 300px;
-        max-height: 350px;
-    }
-
-    .footer-content {
-        flex-direction: column;
-        gap: 0.5rem;
-        padding: 0 1rem;
-    }
-
-    .gauge-container {
-        flex-direction: column;
-        gap: 1rem;
-        margin-bottom: 2rem;
-    }
-
     .gauge {
         width: 200px;
         height: 200px;
+        margin: 1rem auto;
     }
 
     .gauge-value {
@@ -403,50 +387,51 @@ footer {
     }
 
     .gauge-label {
-        font-size: 1rem;
+        font-size: 0.9rem;
     }
 
     .scale-indicator {
         flex-direction: row;
-        gap: 1rem;
-    }
-
-    .scale-indicator .value {
-        font-size: 1rem;
-    }
-
-    .scale-indicator .label {
-        font-size: 0.7rem;
+        gap: 0.5rem;
+        margin: 0.5rem 0;
     }
 
     .disclaimer {
-        padding: 0.75rem 1rem;
         font-size: 0.8rem;
-        margin: 1rem;
+        padding: 0.75rem;
+        margin: 0.5rem;
+    }
+
+    .panel-header {
         flex-direction: column;
-        gap: 0.25rem;
-    }
-
-    .panel-header h2 {
-        font-size: 1.4rem;
-    }
-
-    .severity-badge {
-        padding: 0.3rem 0.8rem;
-        font-size: 0.7rem;
-    }
-
-    .trend-indicator {
-        font-size: 0.8rem;
+        gap: 0.5rem;
+        align-items: flex-start;
     }
 
     .stats {
-        gap: 1rem;
+        width: 100%;
+        justify-content: space-between;
     }
 
-    .max-indicator {
+    .severity-badge {
+        align-self: flex-end;
+    }
+
+    .scrollable-content {
+        max-height: 250px;
+    }
+
+    h2 {
+        font-size: 1.4rem;
+    }
+
+    h3 {
+        font-size: 1.1rem;
+    }
+
+    .footer-content {
+        padding: 0.5rem;
         font-size: 0.8rem;
-        padding: 0.2rem 0.6rem;
     }
 }
 
@@ -464,29 +449,22 @@ footer {
         font-size: 2rem;
     }
 
-    .chart-container {
-        min-height: 250px;
+    .stats {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
     }
 
-    .reasoning-container {
-        min-height: 250px;
+    .trend-indicator, .max-indicator {
+        font-size: 0.8rem;
+    }
+
+    .update-info {
+        font-size: 0.8rem;
     }
 
     .footer-content {
-        font-size: 0.8rem;
-    }
-
-    .separator {
-        margin: 0 0.5rem;
-    }
-
-    .footer-disclaimer {
-        font-size: 0.8rem;
-    }
-
-    .stats {
         flex-direction: column;
-        align-items: flex-end;
         gap: 0.5rem;
     }
 }
@@ -560,4 +538,46 @@ h3 {
 p {
     line-height: 1.6;
     margin-bottom: 1.5rem;
+}
+
+/* PWA specific styles */
+@media all and (display-mode: standalone) {
+    body {
+        padding-top: env(safe-area-inset-top);
+        padding-bottom: env(safe-area-inset-bottom);
+        padding-left: env(safe-area-inset-left);
+        padding-right: env(safe-area-inset-right);
+    }
+
+    .container {
+        min-height: 100vh;
+    }
+
+    .footer {
+        padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+    }
+}
+
+/* Add smooth scrolling and touch handling for mobile */
+@supports (-webkit-overflow-scrolling: touch) {
+    .scrollable-content {
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
+    }
+
+    .chart-container, .reasoning-container {
+        -webkit-tap-highlight-color: transparent;
+    }
+}
+
+/* Improve touch targets for mobile */
+button, 
+.severity-badge, 
+.trend-indicator, 
+.max-indicator,
+.footer-links a {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 12px;
+    touch-action: manipulation;
 } 

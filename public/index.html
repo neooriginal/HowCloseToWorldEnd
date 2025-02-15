@@ -2,8 +2,39 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>How Close To World End</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, minimum-scale=1.0">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="World End">
+    <meta name="application-name" content="How Close To World End">
+    <meta name="theme-color" content="#0a0a0a">
+    <meta name="format-detection" content="telephone=no">
+    
+    <!-- Primary Meta Tags -->
+    <title>How Close To World End - AI-Powered Global Risk Assessment</title>
+    <meta name="title" content="How Close To World End - AI-Powered Global Risk Assessment">
+    <meta name="description" content="Real-time AI analysis of global events calculating world risk levels. Updated every 6 hours with detailed reasoning and historical trends.">
+    <meta name="keywords" content="world events, global risk, AI analysis, world news, risk assessment, global stability, world peace">
+    <meta name="robots" content="index, follow">
+    <meta name="language" content="English">
+    <meta name="author" content="Neo">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://worldend.neoserver.dev/">
+    <meta property="og:title" content="How Close To World End - AI-Powered Global Risk Assessment">
+    <meta property="og:description" content="Real-time AI analysis of global events calculating world risk levels. Updated every 6 hours with detailed reasoning and historical trends.">
+    <meta property="og:image" content="https://worldend.neoserver.dev/logo.jpg">
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://worldend.neoserver.dev/">
+    <meta property="twitter:title" content="How Close To World End - AI-Powered Global Risk Assessment">
+    <meta property="twitter:description" content="Real-time AI analysis of global events calculating world risk levels. Updated every 6 hours with detailed reasoning and historical trends.">
+    <meta property="twitter:image" content="https://worldend.neoserver.dev/logo.jpg">
+    
+    <link rel="canonical" href="https://worldend.neoserver.dev/">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
     <script src="/socket.io/socket.io.js"></script>
@@ -11,6 +42,50 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
     <script defer src="https://umami.neoserver.dev/script.js" data-website-id="e204d773-1049-4276-b4a1-6c9bc3e62f55"></script>
+    
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "How Close To World End",
+        "description": "Real-time AI analysis of global events calculating world risk levels. Updated every 6 hours with detailed reasoning and historical trends.",
+        "url": "https://worldend.neoserver.dev",
+        "applicationCategory": "Analytics",
+        "operatingSystem": "Any",
+        "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+        },
+        "creator": {
+            "@type": "Person",
+            "name": "Neo"
+        },
+        "datePublished": "2025-02-01",
+        "keywords": "world events, global risk, AI analysis, world news, risk assessment, global stability, world peace"
+    }
+    </script>
+
+    <!-- PWA Support -->
+    <link rel="manifest" href="/manifest.json">
+    <link rel="apple-touch-icon" href="/icons/icon-192x192.png">
+    <link rel="apple-touch-startup-image" href="/icons/icon-512x512.png">
+    
+    <!-- PWA Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(registration => {
+                        console.log('ServiceWorker registration successful');
+                    })
+                    .catch(err => {
+                        console.log('ServiceWorker registration failed: ', err);
+                    });
+            });
+        }
+    </script>
 </head>
 <body>
     <div class="glow-background"></div>
@@ -82,7 +157,7 @@
     <footer class="glass-panel">
         <div class="footer-content">
             <div class="footer-links">
-                <a href="https://github.com/Neotastisch/HowCloseToWorldEnd" target="_blank">GitHub</a>
+                <a href="https://github.com/Neo/HowCloseToWorldEnd" target="_blank">GitHub</a>
                 <span class="separator">|</span>
                 <a href="/docs" target="_blank">API</a>
                 <span class="separator">|</span>
