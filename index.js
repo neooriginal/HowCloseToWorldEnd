@@ -233,6 +233,8 @@ async function initializeDB() {
     }
 }
 
+
+
 async function saveWorldEnd(worldend, news, reasoning) {
     try {
         // Convert worldend to a number and ensure it's within valid range
@@ -282,6 +284,10 @@ app.get('/api/latest', async (req, res) => {
         console.error('Error in /api/latest:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
+});
+
+app.get("/widget", (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'widget.html'));
 });
 
 app.get('/api/history', async (req, res) => {

@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>World End Probability Widget</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        :root {
+            --safe-color: #4CAF50;
+            --warning-color: #FFC107;
+            --danger-color: #F44336;
+            --background-color: #0a0a0a;
+            --text-color: #ffffff;
+            --glass-background: rgba(255, 255, 255, 0.1);
+            --glass-border: rgba(255, 255, 255, 0.2);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: transparent;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .widget-container {
+            width: 150px;
+            height: 150px;
+            position: relative;
+        }
+
+        .gauge {
+            width: 100%;
+            height: 100%;
+            background: var(--glass-background);
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+        }
+
+        .gauge::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, var(--safe-color), var(--warning-color), var(--danger-color));
+            z-index: -1;
+            opacity: 0.5;
+            filter: blur(5px);
+        }
+
+        .gauge-value {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--text-color);
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+
+        /* Dynamic color classes */
+        .safe {
+            --current-color: var(--safe-color);
+        }
+
+        .warning {
+            --current-color: var(--warning-color);
+        }
+
+        .danger {
+            --current-color: var(--danger-color);
+        }
+
+        .gauge-ring {
+            position: absolute;
+            top: -5px;
+            left: -5px;
+            right: -5px;
+            bottom: -5px;
+            border-radius: 50%;
+            border: 2px solid var(--glass-border);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+                opacity: 0.5;
+            }
+            50% {
+                transform: scale(1.05);
+                opacity: 0.8;
+            }
+            100% {
+                transform: scale(1);
+                opacity: 0.5;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="widget-container">
+        <div class="gauge">
+            <div class="gauge-ring"></div>
+            <div class="gauge-value">
+                <span id="percentage">--</span>%
+            </div>
+        </div>
+    </div>
+    <script>
+        const socket = io();
+        const percentageElement = document.getElementById('percentage');
+        const gauge = document.querySelector('.gauge');
+
+        function updateGaugeColor(percentage) {
+            gauge.classList.remove('safe', 'warning', 'danger');
+            
+            if (percentage <= 33) {
+                gauge.classList.add('safe');
+            } else if (percentage <= 66) {
+                gauge.classList.add('warning');
+            } else {
+                gauge.classList.add('danger');
+            }
+        }
+
+        // Animate percentage change
+        function animateValue(start, end, duration) {
+            const range = end - start;
+            const increment = range / (duration / 16);
+            let current = start;
+            
+            function updateValue() {
+                current += increment;
+                if ((increment >= 0 && current >= end) || (increment < 0 && current <= end)) {
+                    percentageElement.textContent = Math.round(end);
+                    return;
+                }
+                percentageElement.textContent = Math.round(current);
+                requestAnimationFrame(updateValue);
+            }
+            
+            updateValue();
+        }
+
+        // Initial data load
+        fetch('/api/latest')
+            .then(response => response.json())
+            .then(data => {
+                if (data && data.worldend) {
+                    animateValue(0, data.worldend, 1000);
+                    updateGaugeColor(data.worldend);
+                }
+            });
+
+        // Socket updates
+        socket.on('update', (data) => {
+            const currentValue = parseInt(percentageElement.textContent) || 0;
+            animateValue(currentValue, data.probability, 1000);
+            updateGaugeColor(data.probability);
+        });
+    </script>
+</body>
+</html> 
