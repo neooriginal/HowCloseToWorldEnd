@@ -24,7 +24,7 @@
         }
 
         body {
-            background-color: transparent;
+            background-color: #0a0a0a;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -129,12 +129,18 @@
         const percentageElement = document.getElementById('percentage');
         const gauge = document.querySelector('.gauge');
 
-        //if param bg is a background color, set it
-        if (window.location.search.includes('bg=')) {
-            const bg = window.location.search.split('bg=')[1];
-            document.body.style.backgroundColor = bg;
+        function getParam(param) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(param);
         }
-
+     
+        const bg = getParam('bg');
+        console.log(bg);
+        
+        if (bg) {
+            let formattedBg = bg.replace(/#/g, '');
+            document.body.style.backgroundColor = '#' + formattedBg;
+        }
 
         function updateGaugeColor(percentage) {
             gauge.classList.remove('safe', 'warning', 'danger');
