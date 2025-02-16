@@ -129,6 +129,11 @@
         const percentageElement = document.getElementById('percentage');
         const gauge = document.querySelector('.gauge');
 
+        //if param bg is true, set background color to black
+        if (window.location.search.includes('bg=true')) {
+            document.body.style.backgroundColor = 'black';
+        }
+
         function updateGaugeColor(percentage) {
             gauge.classList.remove('safe', 'warning', 'danger');
             
