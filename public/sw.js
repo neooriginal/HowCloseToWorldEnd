@@ -1,9 +1,5 @@
 const CACHE_NAME = 'world-end-v1';
-const ASSETS_TO_CACHE = [
-    '/',
-    '/index.html',
-    '/privacy.html',
-    '/widget',
+const STATIC_ASSETS = [
     '/styles.css',
     '/app.js',
     '/logo.jpg',
@@ -13,11 +9,11 @@ const ASSETS_TO_CACHE = [
     'https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js'
 ];
 
-// Install event - cache assets
+// Install event - cache static assets
 self.addEventListener('install', event => {
     event.waitUntil(
         caches.open(CACHE_NAME)
-            .then(cache => cache.addAll(ASSETS_TO_CACHE))
+            .then(cache => cache.addAll(STATIC_ASSETS))
             .then(() => self.skipWaiting())
     );
 });
@@ -39,36 +35,71 @@ self.addEventListener('activate', event => {
     );
 });
 
-// Fetch event - serve from cache, fall back to network
+// Helper function to determine if a request is for static asset
+function isStaticAsset(url) {
+    return STATIC_ASSETS.some(asset => url.endsWith(asset));
+}
+
+// Helper function to determine if a request is for API
+function isApiRequest(url) {
+    return url.includes('/api/');
+}
+
+// Fetch event - different strategies for different requests
 self.addEventListener('fetch', event => {
-    // Skip cross-origin requests
-    if (!event.request.url.startsWith(self.location.origin) && 
-        !event.request.url.startsWith('https://fonts.googleapis.com') &&
-        !event.request.url.startsWith('https://cdn.jsdelivr.net')) {
+    const url = event.request.url;
+
+    // Skip cross-origin requests except for whitelisted domains
+    if (!url.startsWith(self.location.origin) && 
+        !url.startsWith('https://fonts.googleapis.com') &&
+        !url.startsWith('https://cdn.jsdelivr.net')) {
         return;
     }
 
-    event.respondWith(
-        caches.match(event.request)
-            .then(response => {
-                if (response) {
-                    return response;
-                }
+    // For API requests: Network-first strategy with no caching
+    if (isApiRequest(url)) {
+        event.respondWith(
+            fetch(event.request)
+                .catch(error => {
+                    console.error('API fetch failed:', error);
+                    return new Response(JSON.stringify({ error: 'Failed to fetch data' }), {
+                        status: 503,
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                })
+        );
+        return;
+    }
 
-                return fetch(event.request).then(response => {
-                    // Don't cache non-successful responses
-                    if (!response || response.status !== 200 || response.type !== 'basic') {
+    // For static assets: Cache-first strategy
+    if (isStaticAsset(url)) {
+        event.respondWith(
+            caches.match(event.request)
+                .then(response => {
+                    if (response) {
                         return response;
                     }
+                    return fetch(event.request).then(response => {
+                        if (!response || response.status !== 200) {
+                            return response;
+                        }
+                        const responseToCache = response.clone();
+                        caches.open(CACHE_NAME)
+                            .then(cache => {
+                                cache.put(event.request, responseToCache);
+                            });
+                        return response;
+                    });
+                })
+        );
+        return;
+    }
 
-                    const responseToCache = response.clone();
-                    caches.open(CACHE_NAME)
-                        .then(cache => {
-                            cache.put(event.request, responseToCache);
-                        });
-
-                    return response;
-                });
+    // For HTML pages: Network-first strategy
+    event.respondWith(
+        fetch(event.request)
+            .catch(() => {
+                return caches.match(event.request);
             })
     );
 }); 
