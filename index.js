@@ -143,6 +143,18 @@ app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 // Apply rate limiting to API routes
 app.use('/api', apiLimiter);
 
+// Add no-cache headers middleware
+app.use((req, res, next) => {
+    // Add headers to prevent caching
+    res.set({
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+        'Surrogate-Control': 'no-store'
+    });
+    next();
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 let connection = undefined;
 

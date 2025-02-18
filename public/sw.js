@@ -9,29 +9,23 @@ const STATIC_ASSETS = [
     'https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js'
 ];
 
-// Install event - cache static assets
+// Unregister all service workers and clean up caches
 self.addEventListener('install', event => {
-    event.waitUntil(
-        caches.open(CACHE_NAME)
-            .then(cache => cache.addAll(STATIC_ASSETS))
-            .then(() => self.skipWaiting())
-    );
+    self.skipWaiting();
 });
 
-// Activate event - clean up old caches
 self.addEventListener('activate', event => {
     event.waitUntil(
-        caches.keys()
-            .then(cacheNames => {
+        Promise.all([
+            // Unregister all service workers
+            self.registration.unregister(),
+            // Clear all caches
+            caches.keys().then(cacheNames => {
                 return Promise.all(
-                    cacheNames.map(cacheName => {
-                        if (cacheName !== CACHE_NAME) {
-                            return caches.delete(cacheName);
-                        }
-                    })
+                    cacheNames.map(cacheName => caches.delete(cacheName))
                 );
             })
-            .then(() => self.clients.claim())
+        ])
     );
 });
 
