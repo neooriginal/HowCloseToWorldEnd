@@ -180,7 +180,7 @@
             .then(response => response.json())
             .then(data => {
                 if (data && data.worldend) {
-                    animateValue(0, data.worldend, 1000);
+                    document.getElementById('percentage').textContent = data.worldend;
                     updateGaugeColor(data.worldend);
                 }
             });
