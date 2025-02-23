@@ -329,7 +329,8 @@ async function calculateWorldEnd(news){
     const prompt = `
     you will be given news articles. based on the articles, respond with a % of how close the world is to extinguishing (0% = world piece, 100% = all icmbs launched). be very critical and think about it.
     This can include climate, natural disasters, politics, space events, etc. only evaluate the news article if it happened right now (and not in the future / past)
-    You shouldnt go over 75% if its not a big event or dangerous event.
+    You shouldnt go over 75% if its not a big event or dangerous event. Calculate the percentage based on global events, local events or small events are not as important.
+    also note that previous events do not just go away and could still be relevant. use previous events and current events to calculate a more accurate percentage.
     ALSO, BE CONSISTENT. CHECK THE HISTORY AND BE CONSISTENT WITH THE EVALUATION CRITERIA.
 
     History of decisions:
