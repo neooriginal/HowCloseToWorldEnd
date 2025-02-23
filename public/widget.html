@@ -6,7 +6,6 @@
     <title>World End Probability Widget</title>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
     <script src="/socket.io/socket.io.js"></script>
-    <meta http-equiv="refresh" content="1">
     <!-- Unregister service workers -->
     <script>
         // Unregister any existing service workers
@@ -176,25 +175,6 @@
             }
         }
 
-        // Animate percentage change
-        function animateValue(start, end, duration) {
-            const range = end - start;
-            const increment = range / (duration / 16);
-            let current = start;
-            
-            function updateValue() {
-                current += increment;
-                if ((increment >= 0 && current >= end) || (increment < 0 && current <= end)) {
-                    percentageElement.textContent = Math.round(end);
-                    return;
-                }
-                percentageElement.textContent = Math.round(current);
-                requestAnimationFrame(updateValue);
-            }
-            
-            updateValue();
-        }
-
         // Initial data load
         fetch('/api/latest')
             .then(response => response.json())
@@ -208,7 +188,7 @@
         // Socket updates
         socket.on('update', (data) => {
             const currentValue = parseInt(percentageElement.textContent) || 0;
-            animateValue(currentValue, data.probability, 1000);
+            document.getElementById('percentage').textContent = data.probability;
             updateGaugeColor(data.probability);
         });
     </script>
