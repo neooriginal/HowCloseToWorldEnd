@@ -102,7 +102,7 @@ function initChart() {
                 },
                 title: {
                     display: true,
-                    text: 'Historical Data (7-Day Average)',
+                    text: 'Historical Data (All Dates)',
                     color: 'rgba(255, 255, 255, 0.8)',
                     font: {
                         family: 'Orbitron',
@@ -150,6 +150,8 @@ function initChart() {
                         },
                         maxRotation: 45,
                         minRotation: 45,
+                        autoSkip: true,
+                        maxTicksLimit: 15,
                         callback: function(value, index, values) {
                             return moment(this.getLabelForValue(value)).format('MMM D');
                         }
@@ -274,20 +276,6 @@ function updateChart(percentage, timestamp) {
         if (maxValueElement) {
             maxValueElement.textContent = `${maxEverValue}%`;
         }
-    }
-    
-    // Keep only last 7 days of data
-    while (historyChart.data.labels.length > 7) {
-        historyChart.data.labels.shift();
-        historyChart.data.datasets[0].data.shift();
-        // Shift the daily count metadata as well
-        const newDailyCount = {};
-        Object.keys(historyChart._meta.dailyCount).forEach(key => {
-            if (key > 0) {
-                newDailyCount[key - 1] = historyChart._meta.dailyCount[key];
-            }
-        });
-        historyChart._meta.dailyCount = newDailyCount;
     }
     
     // Update trend indicator using daily averages
