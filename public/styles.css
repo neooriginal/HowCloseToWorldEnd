@@ -246,10 +246,9 @@ body {
     margin-top: 2rem;
     margin-bottom: 5rem;
     min-height: 400px;
-    max-height: 600px;
 }
 
-.chart-container, .reasoning-container {
+.chart-container, .reasoning-container, .daily-summary-container {
     height: 100%;
     min-height: 400px;
     max-height: 600px;
@@ -257,6 +256,38 @@ body {
     flex-direction: column;
     position: relative;
     padding-bottom: 1rem;
+}
+
+.daily-summary-container {
+    grid-column: 1 / -1;
+    margin-top: 2rem;
+}
+
+.date-indicator {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.9);
+    padding: 0.3rem 0.8rem;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.summary-content {
+    padding: 0 1rem;
+}
+
+.summary-content h3 {
+    color: rgba(255, 255, 255, 0.9);
+    margin: 1.5rem 0 1rem;
+    font-size: 1.1rem;
+}
+
+.summary-content #daily-events,
+.summary-content #daily-impact {
+    color: rgba(255, 255, 255, 0.8);
+    line-height: 1.6;
+    margin-bottom: 2rem;
 }
 
 .chart-container canvas {
@@ -497,6 +528,20 @@ footer {
 
     .separator {
         margin: 0 0.5rem;
+    }
+
+    .daily-summary-container {
+        min-height: 300px;
+        margin-top: 1rem;
+    }
+    
+    .summary-content {
+        padding: 0 0.5rem;
+    }
+    
+    .summary-content h3 {
+        font-size: 1rem;
+        margin: 1rem 0 0.75rem;
     }
 }
 

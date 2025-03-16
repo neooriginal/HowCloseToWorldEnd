@@ -232,9 +232,30 @@ async function initializeDB() {
             INDEX idx_date (date)
         )`);
 
+        await pool.query(`CREATE TABLE IF NOT EXISTS daily_summaries (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            date DATE UNIQUE,
+            key_events TEXT,
+            overall_impact TEXT,
+            average_worldend DECIMAL(5,2),
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_date (date)
+        )`);
+
         const UPDATE_INTERVAL = 6 * 60 * 60 * 1000; // 6 hours in milliseconds
         setInterval(main, UPDATE_INTERVAL);
         
+        // Generate daily summary at midnight
+        const now = new Date();
+        const midnight = new Date(now);
+        midnight.setHours(24, 0, 0, 0);
+        const timeUntilMidnight = midnight - now;
+        setTimeout(() => {
+            generateDailySummary();
+            // Then schedule it to run every 24 hours
+            setInterval(generateDailySummary, 24 * 60 * 60 * 1000);
+        }, timeUntilMidnight);
+
         server.listen(3000, () => {
             console.log('Server is running on port 3000');
             console.log('API documentation available at /docs');
@@ -244,8 +265,6 @@ async function initializeDB() {
         process.exit(1);
     }
 }
-
-
 
 async function saveWorldEnd(worldend, news, reasoning) {
     try {
@@ -402,6 +421,104 @@ async function main(){
         console.error('Error in main loop:', error);
     }
 }
+
+async function generateDailySummary() {
+    try {
+        // Get yesterday's date
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        yesterday.setHours(0, 0, 0, 0);
+        
+        const todayStart = new Date(yesterday);
+        todayStart.setDate(todayStart.getDate() + 1);
+        
+        // Get all events from yesterday
+        const [events] = await pool.query(
+            'SELECT * FROM history WHERE date >= ? AND date < ? ORDER BY date ASC',
+            [yesterday, todayStart]
+        );
+        
+        if (events.length === 0) {
+            console.log('No events to summarize for yesterday');
+            return;
+        }
+        
+        // Calculate average worldend value
+        const avgWorldend = events.reduce((acc, event) => acc + event.worldend, 0) / events.length;
+        
+        // Combine all news and reasoning for the day
+        const allNews = events.map(e => e.news).join('\n');
+        const allReasoning = events.map(e => e.reasoning).join('\n');
+        
+        // Generate summary using AI
+        const prompt = `
+            Based on the following news and reasoning from the past 24 hours, provide a concise daily summary.
+            Focus on the most significant events and their global impact.
+            
+            News from the past 24 hours:
+            ${allNews}
+            
+            Reasoning provided:
+            ${allReasoning}
+            
+            Average world end probability: ${avgWorldend.toFixed(2)}%
+            
+            Respond in JSON format:
+            {
+                "key_events": "Bullet point list of the most important events",
+                "overall_impact": "Analysis of the day's overall impact on global stability"
+            }
+        `;
+        
+        const response = await openai.chat.completions.create({
+            model: "gpt-4o-mini",
+            messages: [{ role: "user", content: prompt }],
+            response_format: { type: "json_object" }
+        });
+        
+        const summary = JSON.parse(response.choices[0].message.content);
+        
+        // Save the daily summary
+        await pool.query(
+            'INSERT INTO daily_summaries (date, key_events, overall_impact, average_worldend) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE key_events = VALUES(key_events), overall_impact = VALUES(overall_impact), average_worldend = VALUES(average_worldend)',
+            [yesterday.toISOString().split('T')[0], summary.key_events, summary.overall_impact, avgWorldend]
+        );
+        
+        // Emit the new summary to all connected clients
+        io.emit('daily_summary', {
+            date: yesterday.toISOString().split('T')[0],
+            key_events: summary.key_events,
+            overall_impact: summary.overall_impact,
+            average_worldend: avgWorldend
+        });
+        
+        console.log('Daily summary generated successfully');
+    } catch (error) {
+        console.error('Error generating daily summary:', error);
+    }
+}
+
+// Add new endpoint to get daily summaries
+app.get('/api/daily-summary', async (req, res) => {
+    try {
+        const date = req.query.date ? new Date(req.query.date) : new Date();
+        date.setHours(0, 0, 0, 0);
+        
+        const [rows] = await pool.query(
+            'SELECT * FROM daily_summaries WHERE date = ? LIMIT 1',
+            [date.toISOString().split('T')[0]]
+        );
+        
+        if (rows.length > 0) {
+            res.json(rows[0]);
+        } else {
+            res.status(404).json({ error: 'No summary available for this date' });
+        }
+    } catch (error) {
+        console.error('Error in /api/daily-summary:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
 
 initializeDB();
 

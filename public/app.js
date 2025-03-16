@@ -14,6 +14,9 @@ const trendArrow = document.querySelector('.trend-arrow');
 const trendValue = document.querySelector('.trend-value');
 const nextUpdateElement = document.getElementById('next-update');
 const maxValueElement = document.querySelector('.max-value');
+const dailyEventsElement = document.getElementById('daily-events');
+const dailyImpactElement = document.getElementById('daily-impact');
+const summaryDateElement = document.getElementById('summary-date');
 
 // Chart initialization
 let historyChart;
@@ -306,6 +309,49 @@ style.textContent = `
 }`;
 document.head.appendChild(style);
 
+// Function to format date for display
+function formatDisplayDate(date) {
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    
+    if (date.toDateString() === today.toDateString()) {
+        return 'Today';
+    } else if (date.toDateString() === yesterday.toDateString()) {
+        return 'Yesterday';
+    } else {
+        return moment(date).format('MMMM D, YYYY');
+    }
+}
+
+// Function to update daily summary
+async function updateDailySummary(date = new Date()) {
+    try {
+        const response = await fetch(`/api/daily-summary?date=${date.toISOString().split('T')[0]}`);
+        if (!response.ok) {
+            throw new Error('Failed to fetch daily summary');
+        }
+        
+        const summary = await response.json();
+        
+        // Update the UI
+        summaryDateElement.textContent = formatDisplayDate(new Date(summary.date));
+        dailyEventsElement.innerHTML = summary.key_events.replace(/\n/g, '<br>');
+        dailyImpactElement.textContent = summary.overall_impact;
+        
+    } catch (error) {
+        console.error('Error updating daily summary:', error);
+        summaryDateElement.textContent = 'Today';
+        dailyEventsElement.textContent = 'No summary available yet';
+        dailyImpactElement.textContent = 'Check back later for today\'s summary';
+    }
+}
+
+// Socket event handler for daily summary updates
+socket.on('daily_summary', (data) => {
+    updateDailySummary(new Date(data.date));
+});
+
 // Initialize the application
 async function init() {
     try {
@@ -338,6 +384,9 @@ async function init() {
                 new Date(latest.date)
             );
             
+            // Update daily summary
+            updateDailySummary();
+            
             // Clear existing chart data
             historyChart.data.labels = [];
             historyChart.data.datasets[0].data = [];
@@ -359,15 +408,8 @@ async function init() {
             throw new Error('No historical data available');
         }
     } catch (error) {
-        console.error('Failed to initialize:', error);
-        // Show error state
-        percentageElement.textContent = '--';
-        newsSummaryElement.textContent = 'Error loading data';
-        reasoningElement.textContent = 'Please try refreshing the page';
-        lastUpdateElement.textContent = '--';
-        
-        // Retry initialization after 5 seconds
-        setTimeout(init, 5000);
+        console.error('Error initializing application:', error);
+        // Handle error state in the UI
     }
 }
 
