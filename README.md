@@ -23,7 +23,7 @@ Visit [the website](https://worldend.neoserver.dev) to see the project in action
 ### Prerequisites
 
 - Node.js (v18 or higher)
-- MySQL/MariaDB database
+- Supabase account and project
 - NewsAPI key
 - OpenRouter API key (for GPT access)
 
@@ -40,24 +40,26 @@ Visit [the website](https://worldend.neoserver.dev) to see the project in action
    npm install
    ```
 
-3. Create a `.env` file in the root directory:
+3. Set up Supabase:
+   - Create a new project at [supabase.com](https://supabase.com)
+   - Go to your project dashboard
+   - Navigate to the SQL Editor
+   - Copy and run the contents of `init.sql` to create the required tables
+
+4. Create a `.env` file in the root directory:
    ```env
-   # Database Configuration
-   DB_HOST=localhost
-   DB_PORT=3306
-   DB_USER=your_db_user
-   DB_PASSWORD=your_db_password
-   DB_NAME=worldend
+   # Supabase Configuration
+   SUPABASE_URL=https://your-project-id.supabase.co
+   SUPABASE_ANON_KEY=your_supabase_anon_key
 
    # API Keys
    NEWS_API_KEY=your_newsapi_key
    OPENROUTER_API_KEY=your_openrouter_key
    ```
 
-4. Create the database:
-   ```sql
-   CREATE DATABASE worldend;
-   ```
+   **Finding your Supabase credentials:**
+   - **URL**: `https://[your-project-id].supabase.co`
+   - **Anon Key**: Found in Project Settings → API → anon public key
 
 5. Start the server:
    ```bash
@@ -105,7 +107,6 @@ This is an educational project that uses AI to analyze news and generate probabi
 ## 📄 License
 
 This project is licensed under a custom license that allows personal use and self-hosting but restricts commercial use. See the [LICENSE](LICENSE) file for details.
-
 
 ## 📧 Contact
 

@@ -1,6 +1,6 @@
 const openai_lib = require('openai');
 const axios = require('axios');
-const mysql = require('mysql2/promise');
+const { createClient } = require('@supabase/supabase-js');
 const express = require('express');
 const dotenv = require('dotenv');
 const http = require('http');
@@ -156,7 +156,6 @@ app.use((req, res, next) => {
 });
 
 app.use(express.static(path.join(__dirname, 'public')));
-let connection = undefined;
 
 let lastNews = undefined
 
@@ -165,17 +164,11 @@ const openai = new openai_lib({
     baseURL: 'https://openrouter.ai/api/v1',
 });
 
-// Add connection pool instead of single connection for better scalability
-const pool = mysql.createPool({
-    host: process.env.DB_HOST,
-    port: process.env.DB_PORT,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit: 0
-});
+// Initialize Supabase client
+const supabase = createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_ANON_KEY
+);
 
 // Track last successful AI update
 let lastAIUpdate = null;
@@ -219,28 +212,12 @@ async function getNews(){
 
 async function initializeDB() {
     try {
-        // Test database connection
-        await pool.query('SELECT 1');
-        console.log('Database connection successful');
-
-        await pool.query(`CREATE TABLE IF NOT EXISTS history (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            news TEXT,
-            worldend INT,
-            reasoning TEXT,
-            date DATETIME DEFAULT CURRENT_TIMESTAMP,
-            INDEX idx_date (date)
-        )`);
-
-        await pool.query(`CREATE TABLE IF NOT EXISTS daily_summaries (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            date DATE UNIQUE,
-            key_events TEXT,
-            overall_impact TEXT,
-            average_worldend DECIMAL(5,2),
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            INDEX idx_date (date)
-        )`);
+        // Test Supabase connection
+        const { data, error } = await supabase.from('history').select('id').limit(1);
+        if (error && error.code !== 'PGRST116') { // PGRST116 is "table not found" which is ok during first setup
+            throw error;
+        }
+        console.log('Supabase connection successful');
 
         const UPDATE_INTERVAL = 6 * 60 * 60 * 1000; // 6 hours in milliseconds
         setInterval(main, UPDATE_INTERVAL);
@@ -276,11 +253,19 @@ async function saveWorldEnd(worldend, news, reasoning) {
         // Round to 2 decimal places and ensure it's within bounds
         const normalizedWorldend = Math.min(Math.max(Math.round(worldendValue * 100) / 100, 0), 100);
         
-        // Use prepared statement for SQL injection prevention
-        await pool.query(
-            'INSERT INTO history (worldend, news, reasoning) VALUES (?, ?, ?)', 
-            [normalizedWorldend, news, reasoning]
-        );
+        const { error } = await supabase
+            .from('history')
+            .insert([
+                { 
+                    worldend: normalizedWorldend, 
+                    news, 
+                    reasoning 
+                }
+            ]);
+        
+        if (error) {
+            throw error;
+        }
         
         // Update last AI update timestamp
         lastAIUpdate = Date.now();
@@ -292,25 +277,37 @@ async function saveWorldEnd(worldend, news, reasoning) {
 
 async function getWorldEnd() {
     try {
-        // Use prepared statement with proper limit
-        const [rows] = await pool.query(
-            'SELECT * FROM history ORDER BY date DESC LIMIT ?',
-            [10]
-        );
-        return rows;
+        const { data, error } = await supabase
+            .from('history')
+            .select('*')
+            .order('date', { ascending: false })
+            .limit(10);
+        
+        if (error) {
+            throw error;
+        }
+        
+        return data || [];
     } catch (error) {
         console.error('Error fetching world end data:', error);
         throw error;
     }
 }
 
-// API endpoints with prepared statements
+// API endpoints
 app.get('/api/latest', async (req, res) => {
     try {
-        const [rows] = await pool.query(
-            'SELECT * FROM history ORDER BY date DESC LIMIT 1'
-        );
-        res.json(rows[0] || { error: 'No data available' });
+        const { data, error } = await supabase
+            .from('history')
+            .select('*')
+            .order('date', { ascending: false })
+            .limit(1);
+        
+        if (error) {
+            throw error;
+        }
+        
+        res.json(data[0] || { error: 'No data available' });
     } catch (error) {
         console.error('Error in /api/latest:', error);
         res.status(500).json({ error: 'Internal server error' });
@@ -324,11 +321,17 @@ app.get("/widget", (req, res) => {
 app.get('/api/history', async (req, res) => {
     try {
         const limit = Math.min(Math.max(parseInt(req.query.limit) || 10, 1), 100);
-        const [rows] = await pool.query(
-            'SELECT * FROM history ORDER BY date DESC LIMIT ?',
-            [limit]
-        );
-        res.json(rows);
+        const { data, error } = await supabase
+            .from('history')
+            .select('*')
+            .order('date', { ascending: false })
+            .limit(limit);
+        
+        if (error) {
+            throw error;
+        }
+        
+        res.json(data || []);
     } catch (error) {
         console.error('Error in /api/history:', error);
         res.status(500).json({ error: 'Internal server error' });
@@ -433,10 +436,16 @@ async function generateDailySummary() {
         todayStart.setDate(todayStart.getDate() + 1);
         
         // Get all events from yesterday
-        const [events] = await pool.query(
-            'SELECT * FROM history WHERE date >= ? AND date < ? ORDER BY date ASC',
-            [yesterday, todayStart]
-        );
+        const { data: events, error } = await supabase
+            .from('history')
+            .select('*')
+            .gte('date', yesterday.toISOString())
+            .lt('date', todayStart.toISOString())
+            .order('date', { ascending: true });
+        
+        if (error) {
+            throw error;
+        }
         
         if (events.length === 0) {
             console.log('No events to summarize for yesterday');
@@ -478,11 +487,21 @@ async function generateDailySummary() {
         
         const summary = JSON.parse(response.choices[0].message.content);
         
-        // Save the daily summary
-        await pool.query(
-            'INSERT INTO daily_summaries (date, key_events, overall_impact, average_worldend) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE key_events = VALUES(key_events), overall_impact = VALUES(overall_impact), average_worldend = VALUES(average_worldend)',
-            [yesterday.toISOString().split('T')[0], summary.key_events, summary.overall_impact, avgWorldend]
-        );
+        // Save the daily summary (using upsert)
+        const { error: upsertError } = await supabase
+            .from('daily_summaries')
+            .upsert([
+                {
+                    date: yesterday.toISOString().split('T')[0],
+                    key_events: summary.key_events,
+                    overall_impact: summary.overall_impact,
+                    average_worldend: avgWorldend
+                }
+            ]);
+        
+        if (upsertError) {
+            throw upsertError;
+        }
         
         // Emit the new summary to all connected clients
         io.emit('daily_summary', {
@@ -504,13 +523,18 @@ app.get('/api/daily-summary', async (req, res) => {
         const date = req.query.date ? new Date(req.query.date) : new Date();
         date.setHours(0, 0, 0, 0);
         
-        const [rows] = await pool.query(
-            'SELECT * FROM daily_summaries WHERE date = ? LIMIT 1',
-            [date.toISOString().split('T')[0]]
-        );
+        const { data, error } = await supabase
+            .from('daily_summaries')
+            .select('*')
+            .eq('date', date.toISOString().split('T')[0])
+            .limit(1);
         
-        if (rows.length > 0) {
-            res.json(rows[0]);
+        if (error) {
+            throw error;
+        }
+        
+        if (data && data.length > 0) {
+            res.json(data[0]);
         } else {
             res.status(404).json({ error: 'No summary available for this date' });
         }
