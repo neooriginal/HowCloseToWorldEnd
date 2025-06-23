@@ -2,212 +2,185 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, minimum-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="World End">
-    <meta name="application-name" content="How Close To World End">
     <meta name="theme-color" content="#0a0a0a">
-    <meta name="format-detection" content="telephone=no">
     
-    <!-- Primary Meta Tags -->
-    <title>How Close To World End - AI-Powered Global Risk Assessment</title>
-    <meta name="title" content="How Close To World End - AI-Powered Global Risk Assessment">
-    <meta name="description" content="Real-time AI analysis of global events calculating world risk levels. Updated every 6 hours with detailed reasoning and historical trends.">
-    <meta name="keywords" content="world events, global risk, AI analysis, world news, risk assessment, global stability, world peace">
-    <meta name="robots" content="index, follow">
-    <meta name="language" content="English">
-    <meta name="author" content="Neo">
+    <title>How Close To World End - Global Threat Monitor</title>
+    <meta name="title" content="How Close To World End - Global Threat Monitor">
+    <meta name="description" content="Real-time AI-powered global threat assessment tracking humanity's proximity to catastrophic events.">
+    <meta name="keywords" content="world end, global threats, doomsday clock, conflict tracking, AI analysis, real-time monitoring">
     
-    <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://worldend.neoserver.dev/">
-    <meta property="og:title" content="How Close To World End - AI-Powered Global Risk Assessment">
-    <meta property="og:description" content="Real-time AI analysis of global events calculating world risk levels. Updated every 6 hours with detailed reasoning and historical trends.">
+    <meta property="og:title" content="How Close To World End - Global Threat Monitor">
+    <meta property="og:description" content="Real-time AI-powered global threat assessment tracking humanity's proximity to catastrophic events.">
     <meta property="og:image" content="https://worldend.neoserver.dev/logo.jpg">
     
-    <!-- Twitter -->
-    <meta property="twitter:card" content="summary_large_image">
-    <meta property="twitter:url" content="https://worldend.neoserver.dev/">
-    <meta property="twitter:title" content="How Close To World End - AI-Powered Global Risk Assessment">
-    <meta property="twitter:description" content="Real-time AI analysis of global events calculating world risk levels. Updated every 6 hours with detailed reasoning and historical trends.">
-    <meta property="twitter:image" content="https://worldend.neoserver.dev/logo.jpg">
-    
     <link rel="canonical" href="https://worldend.neoserver.dev/">
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&family=JetBrains+Mono:wght@400;500;700&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
-    <script src="/socket.io/socket.io.js"></script>
     <link rel="icon" type="image/png" href="logo.jpg">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
-    <script defer src="https://umami.neoserver.dev/script.js" data-website-id="e204d773-1049-4276-b4a1-6c9bc3e62f55"></script>
     
-    <!-- Structured Data -->
-    <script type="application/ld+json">
-    {
-        "@context": "https://schema.org",
-        "@type": "WebApplication",
-        "name": "How Close To World End",
-        "description": "Real-time AI analysis of global events calculating world risk levels. Updated every 6 hours with detailed reasoning and historical trends.",
-        "url": "https://worldend.neoserver.dev",
-        "applicationCategory": "Analytics",
-        "operatingSystem": "Any",
-        "offers": {
-            "@type": "Offer",
-            "price": "0",
-            "priceCurrency": "USD"
-        },
-        "creator": {
-            "@type": "Person",
-            "name": "Neo"
-        },
-        "datePublished": "2025-02-01",
-        "keywords": "world events, global risk, AI analysis, world news, risk assessment, global stability, world peace"
-    }
-    </script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://unpkg.com/topojson@3"></script>
 
-    <!-- Unregister service workers -->
-    <script>
-        // Unregister any existing service workers
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then(function(registrations) {
-                for(let registration of registrations) {
-                    registration.unregister();
-                }
-            });
-            // Clear all caches
-            if ('caches' in window) {
-                caches.keys().then(function(cacheNames) {
-                    return Promise.all(
-                        cacheNames.map(function(cacheName) {
-                            return caches.delete(cacheName);
-                        })
-                    );
-                });
-            }
-        }
-    </script>
-
-    <!-- PWA Support -->
-    <link rel="manifest" href="/manifest.json">
-    <link rel="apple-touch-icon" href="/icons/icon-192x192.png">
-    <link rel="apple-touch-startup-image" href="/icons/icon-512x512.png">
-    
-    <!-- PWA Service Worker Registration -->
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js')
-                    .then(registration => {
-                        console.log('ServiceWorker registration successful');
-                    })
-                    .catch(err => {
-                        console.log('ServiceWorker registration failed: ', err);
-                    });
-            });
-        }
-    </script>
 </head>
 <body>
-    <div class="glow-background"></div>
-    <div class="container">
-        <div class="disclaimer">
-            This is an AI-generated probability based on current news. Values are speculative and should not cause panic.
-        </div>
-        
-        <div class="gauge-container">
-            <div class="scale-indicator left">
-                <span class="value">0%</span>
-                <span class="label">World Peace</span>
-            </div>
-            <div class="gauge">
-                <div class="gauge-ring"></div>
-                <div class="gauge-value">
-                    <span id="percentage">--</span>%
+    <div class="app-container">
+        <header class="app-header">
+            <div class="header-content">
+                <div class="header-left">
+                    <h1 class="app-title">HOW CLOSE TO <span class="world-end">WORLD END</span></h1>
+                    <div class="subtitle">Global Catastrophe Risk Assessment</div>
+                    <div class="status-indicator">
+                        <span class="status-dot" id="statusDot"></span>
+                        <span id="statusText">Monitoring Global Threats</span>
+                    </div>
                 </div>
-                <div class="gauge-label">World End Probability</div>
-            </div>
-            <div class="scale-indicator right">
-                <span class="value">100%</span>
-                <span class="label">Total Destruction</span>
-            </div>
-            <div class="update-info">
-                <div class="last-update">
-                    Last updated: <span id="last-update">--</span>
+                <div class="header-right">
+                    <div class="doomsday-clock">
+                        <div class="clock-container">
+                            <div class="clock-title">THREAT LEVEL</div>
+                            <div class="clock-percentage">
+                                <span class="percentage-value" id="globalRisk">--</span>
+                                <button class="info-icon" id="reasoningBtn" title="Show AI Reasoning">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
+                                    </svg>
+                                </button>
+                            </div>
+                            <div class="clock-subtitle">TO GLOBAL CATASTROPHE</div>
+                        </div>
+                    </div>
+                    <div class="global-stats">
+                        <div class="stat-item">
+                            <span class="stat-value" id="activeConflicts">--</span>
+                            <span class="stat-label">Active Threats</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value" id="highRiskCountries">--</span>
+                            <span class="stat-label">Critical Zones</span>
+                        </div>
+                    </div>
+                    <div class="last-update">
+                        Last scan: <span id="lastUpdate">--</span>
+                    </div>
                 </div>
-                <div class="next-update">
-                    Next update in: <span id="next-update">--</span>
+            </div>
+        </header>
+
+        <!-- Reasoning Modal -->
+        <div class="modal-overlay" id="reasoningModal" style="display: none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>AI Threat Assessment Reasoning</h3>
+                    <button class="modal-close" id="closeReasoningModal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="reasoning-section">
+                        <h4>Current Analysis</h4>
+                        <p id="modalReasoning">Loading reasoning...</p>
+                    </div>
+                    <div class="reasoning-section">
+                        <h4>Trend Assessment</h4>
+                        <div class="trend-display">
+                            <span class="trend-arrow" id="modalTrendArrow">→</span>
+                            <span class="trend-text" id="modalTrendText">Stable</span>
+                        </div>
+                    </div>
+                    <div class="reasoning-section">
+                        <h4>Key Threat Factors</h4>
+                        <ul id="modalKeyEvents" class="threat-factors">
+                            <li>Loading...</li>
+                        </ul>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div class="info-container">
-            <div class="chart-container glass-panel">
-                <div class="panel-header">
-                    <div class="stats">
-                        <div class="trend-indicator">
-                            <span class="trend-arrow">↑</span>
-                            <span class="trend-value">0%</span>
+        <main class="main-content">
+            <div class="map-container">
+                <div class="map-controls">
+                    <button class="control-btn" id="resetZoom">Reset View</button>
+                    <div class="legend">
+                        <div class="legend-title">Threat Levels</div>
+                        <div class="legend-items">
+                            <div class="legend-item">
+                                <div class="legend-color safe"></div>
+                                <span>Minimal (0-33)</span>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-color moderate"></div>
+                                <span>Elevated (34-66)</span>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-color high"></div>
+                                <span>Severe (67-85)</span>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-color critical"></div>
+                                <span>CRITICAL (86-100)</span>
+                            </div>
                         </div>
-                        <div class="max-indicator">
-                            Max: <span class="max-value">0%</span>
+                    </div>
+                </div>
+                <svg id="worldMap"></svg>
+                <div class="tooltip" id="tooltip"></div>
+            </div>
+
+            <div class="sidebar">
+                <div class="panel" id="countryPanel" style="display: none;">
+                    <div class="panel-header">
+                        <h3 id="countryName">Select a Region</h3>
+                        <div class="country-risk" id="countryRisk"></div>
+                    </div>
+                    <div class="panel-content">
+                        <div class="conflicts-list" id="conflictsList">
+                            <p class="no-data">Click on a region to view threats</p>
                         </div>
                     </div>
                 </div>
-                <canvas id="historyChart"></canvas>
-            </div>
-            
-            <div class="reasoning-container glass-panel">
-                <div class="panel-header">
-                    <h2>Latest Analysis</h2>
-                    <div class="severity-badge">MONITORING</div>
-                </div>
-                <div class="scrollable-content">
-                    <div class="news-summary">
-                        <h3>News Summary</h3>
-                        <p id="news-summary">Loading...</p>
+
+                <div class="panel">
+                    <div class="panel-header">
+                        <h3>Global Threat Assessment</h3>
+                        <div class="trend-indicator" id="trendIndicator">
+                            <span class="trend-arrow">→</span>
+                            <span class="trend-text">Stable</span>
+                        </div>
                     </div>
-                    <div class="reasoning">
-                        <h3>Reasoning</h3>
-                        <p id="reasoning">Loading...</p>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="daily-summary-container glass-panel">
-                <div class="panel-header">
-                    <h2>Daily Summary</h2>
-                    <div class="date-indicator">
-                        <span id="summary-date">Today</span>
+                    <div class="panel-content">
+                        <div class="analysis-section">
+                            <h4>Critical Events</h4>
+                            <ul id="keyEvents" class="events-list">
+                                <li>Scanning for threats...</li>
+                            </ul>
+                        </div>
+                        <div class="analysis-section">
+                            <h4>Situation Summary</h4>
+                            <p id="newsSummary">Analyzing global threat landscape...</p>
+                        </div>
                     </div>
                 </div>
-                <div class="scrollable-content">
-                    <div class="summary-content">
-                        <h3>Key Events</h3>
-                        <div id="daily-events">Loading...</div>
-                        <h3>Overall Impact</h3>
-                        <div id="daily-impact">Loading...</div>
+
+                <div class="panel">
+                    <div class="panel-header">
+                        <h3>Active Threats</h3>
+                    </div>
+                    <div class="panel-content">
+                        <div class="recent-conflicts" id="recentConflicts">
+                            <p class="loading">Scanning for active threats...</p>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </main>
     </div>
-    <footer class="glass-panel">
-        <div class="footer-content">
-            <div class="footer-links">
-                <a href="https://github.com/neooriginal/HowCloseToWorldEnd" target="_blank">GitHub</a>
-                <span class="separator">|</span>
-                <a href="/docs" target="_blank">API</a>
-                <span class="separator">|</span>
-                <a href="/privacy.html">Privacy Policy</a>
-            </div>
-            <div class="footer-disclaimer">
-                Updates every 6 hours • Not affiliated with any government organization
-            </div>
-        </div>
-    </footer>
-    <div id="background-effects"></div>
+
     <script src="app.js"></script>
 </body>
 </html> 

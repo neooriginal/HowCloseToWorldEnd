@@ -2,7 +2,6 @@
 
 A real-time AI-powered dashboard that analyzes global news to estimate how close we are to potential world-ending scenarios. The system uses advanced AI to process current events and calculate a probability score, providing insights into global stability.
 
-![image](https://github.com/user-attachments/assets/cf36a1b5-3747-448b-800e-83ea6cfc1d91)
 
 ## 🌟 Features
 
@@ -13,10 +12,6 @@ A real-time AI-powered dashboard that analyzes global news to estimate how close
 - 🎯 Detailed reasoning for each probability
 - 📱 Responsive design
 - 🔌 Public API with documentation
-
-## 🚀 Live Demo
-
-Visit [the website](https://worldend.neoserver.dev) to see the project in action.
 
 ## 🛠️ Self-Hosting Guide
 

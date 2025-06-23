@@ -1,428 +1,499 @@
-// Initialize socket connection
 const socket = io();
 
-// DOM elements
-const percentageElement = document.getElementById('percentage');
-const lastUpdateElement = document.getElementById('last-update');
-const newsSummaryElement = document.getElementById('news-summary');
-const reasoningElement = document.getElementById('reasoning');
-const backgroundEffects = document.getElementById('background-effects');
-const gauge = document.querySelector('.gauge');
-const glowBackground = document.querySelector('.glow-background');
-const severityBadge = document.querySelector('.severity-badge');
-const trendArrow = document.querySelector('.trend-arrow');
-const trendValue = document.querySelector('.trend-value');
-const nextUpdateElement = document.getElementById('next-update');
-const maxValueElement = document.querySelector('.max-value');
-const dailyEventsElement = document.getElementById('daily-events');
-const dailyImpactElement = document.getElementById('daily-impact');
-const summaryDateElement = document.getElementById('summary-date');
-
-// Chart initialization
-let historyChart;
-const ctx = document.getElementById('historyChart').getContext('2d');
-let maxEverValue = 0;
-
-// Function to update the gauge color based on percentage
-function updateGaugeColor(percentage) {
-    gauge.classList.remove('safe', 'warning', 'danger');
-    document.body.classList.remove('safe', 'warning', 'danger');
-    
-    let colorClass;
-    if (percentage <= 33) {
-        colorClass = 'safe';
-        severityBadge.textContent = 'MONITORING';
-        severityBadge.className = 'severity-badge safe';
-    } else if (percentage <= 66) {
-        colorClass = 'warning';
-        severityBadge.textContent = 'CAUTION';
-        severityBadge.className = 'severity-badge warning';
-    } else {
-        colorClass = 'danger';
-        severityBadge.textContent = 'CRITICAL';
-        severityBadge.className = 'severity-badge danger';
-    }
-    
-    gauge.classList.add(colorClass);
-    document.body.classList.add(colorClass);
-    
-    // Update glow background
-    glowBackground.style.background = `radial-gradient(circle at center, var(--${colorClass}-color) 0%, var(--background-color) 70%)`;
-    
-    return `var(--${colorClass}-color)`;
-}
-
-// Function to create background effects based on percentage
-function updateBackgroundEffects(percentage) {
-    const color = updateGaugeColor(percentage);
-    const numSymbols = Math.floor(percentage / 10) + 5;
-    
-    backgroundEffects.innerHTML = '';
-    const symbols = ['☢️', '⚠️', '🌍', '⚡', '🔥'];
-    
-    for (let i = 0; i < numSymbols; i++) {
-        const symbol = document.createElement('div');
-        symbol.textContent = symbols[Math.floor(Math.random() * symbols.length)];
-        symbol.style.position = 'absolute';
-        symbol.style.left = `${Math.random() * 100}%`;
-        symbol.style.top = `${Math.random() * 100}%`;
-        symbol.style.transform = `rotate(${Math.random() * 360}deg)`;
-        symbol.style.fontSize = `${Math.random() * 2 + 1}rem`;
-        symbol.style.opacity = '0.2';
-        symbol.style.transition = 'all 0.5s ease';
+class GlobalThreatTracker {
+    constructor() {
+        this.svg = null;
+        this.projection = null;
+        this.path = null;
+        this.worldData = null;
+        this.countriesData = {};
+        this.conflictsData = [];
+        this.globalAnalysis = null;
+        this.selectedCountry = null;
         
-        // Add floating animation
-        symbol.style.animation = `float ${Math.random() * 5 + 5}s ease-in-out infinite`;
-        backgroundEffects.appendChild(symbol);
+        this.init();
+        this.setupSocketListeners();
+        this.loadInitialData();
     }
-}
 
-// Initialize chart
-function initChart() {
-    historyChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: [],
-            datasets: [{
-                label: 'World End Probability',
-                data: [],
-                borderColor: 'rgba(255, 255, 255, 0.8)',
-                backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                tension: 0.4,
-                fill: true
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            animation: {
-                duration: 1000,
-                easing: 'easeInOutQuart'
-            },
-            plugins: {
-                legend: {
-                    display: false
-                },
-                title: {
-                    display: true,
-                    text: 'Historical Data (All Dates)',
-                    color: 'rgba(255, 255, 255, 0.8)',
-                    font: {
-                        family: 'Orbitron',
-                        size: 16,
-                        weight: 'bold'
-                    },
-                    padding: {
-                        top: 10,
-                        bottom: 20
-                    }
-                },
-                tooltip: {
-                    callbacks: {
-                        title: function(context) {
-                            return moment(context[0].label).format('MMMM D, YYYY');
-                        },
-                        label: function(context) {
-                            return `Average: ${context.raw}%`;
-                        }
-                    }
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    max: 100,
-                    grid: {
-                        color: 'rgba(255, 255, 255, 0.1)'
-                    },
-                    ticks: {
-                        color: 'rgba(255, 255, 255, 0.8)',
-                        font: {
-                            family: 'Orbitron'
-                        }
-                    }
-                },
-                x: {
-                    grid: {
-                        color: 'rgba(255, 255, 255, 0.1)'
-                    },
-                    ticks: {
-                        color: 'rgba(255, 255, 255, 0.8)',
-                        font: {
-                            family: 'Orbitron'
-                        },
-                        maxRotation: 45,
-                        minRotation: 45,
-                        autoSkip: true,
-                        maxTicksLimit: 15,
-                        callback: function(value, index, values) {
-                            return moment(this.getLabelForValue(value)).format('MMM D');
-                        }
-                    }
-                }
+    init() {
+        this.setupMap();
+        this.setupEventListeners();
+        this.setupModal();
+    }
+
+    setupModal() {
+        const reasoningBtn = document.getElementById('reasoningBtn');
+        const modal = document.getElementById('reasoningModal');
+        const closeBtn = document.getElementById('closeReasoningModal');
+
+        reasoningBtn.addEventListener('click', () => {
+            this.showReasoningModal();
+        });
+
+        closeBtn.addEventListener('click', () => {
+            modal.style.display = 'none';
+        });
+
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.style.display = 'none';
+            }
+        });
+    }
+
+    showReasoningModal() {
+        const modal = document.getElementById('reasoningModal');
+        
+        if (this.globalAnalysis) {
+            document.getElementById('modalReasoning').textContent = 
+                this.globalAnalysis.ai_reasoning || 'No reasoning data available';
+            
+            document.getElementById('modalTrendText').textContent = 
+                this.globalAnalysis.trend_direction || 'Unknown';
+            
+            const trendArrow = document.getElementById('modalTrendArrow');
+            this.updateTrendArrow(trendArrow, this.globalAnalysis.trend_direction);
+            
+            const keyEventsList = document.getElementById('modalKeyEvents');
+            if (this.globalAnalysis.key_events && this.globalAnalysis.key_events.length > 0) {
+                keyEventsList.innerHTML = this.globalAnalysis.key_events
+                    .map(event => `<li>${event}</li>`)
+                    .join('');
+            } else {
+                keyEventsList.innerHTML = '<li>No critical events identified</li>';
             }
         }
-    });
-    historyChart._meta = { dailyCount: {} };
-}
-
-// Update trend indicator
-function updateTrendIndicator(currentValue, previousValue) {
-    const difference = currentValue - previousValue;
-    trendArrow.className = 'trend-arrow';
-    
-    if (difference > 0) {
-        trendArrow.textContent = '↑';
-        trendArrow.classList.add('up');
-        trendValue.textContent = `+${difference.toFixed(1)}%`;
-    } else if (difference < 0) {
-        trendArrow.textContent = '↓';
-        trendArrow.classList.add('down');
-        trendValue.textContent = `${difference.toFixed(1)}%`;
-    } else {
-        trendArrow.textContent = '→';
-        trendValue.textContent = '0%';
-    }
-}
-
-// Function to update the next update countdown
-function updateNextUpdateCountdown() {
-    const now = moment();
-    const currentHour = now.hour();
-    const nextUpdateHour = Math.ceil(currentHour / 6) * 6;
-    const nextUpdate = moment().startOf('hour').hour(nextUpdateHour);
-    
-    if (nextUpdate.isBefore(now)) {
-        nextUpdate.add(6, 'hours');
-    }
-    
-    const duration = moment.duration(nextUpdate.diff(now));
-    const hours = Math.floor(duration.asHours());
-    const minutes = Math.floor(duration.minutes());
-    const seconds = Math.floor(duration.seconds());
-    
-    nextUpdateElement.textContent = `${hours}h ${minutes}m ${seconds}s`;
-}
-
-// Start the countdown timer
-setInterval(updateNextUpdateCountdown, 1000);
-
-// Update the display with new data
-function updateDisplay(percentage, newsSummary, reasoning, timestamp) {
-    // Animate the percentage change
-    const currentValue = parseFloat(percentageElement.textContent) || 0;
-    const targetValue = percentage;
-    const duration = 1000; // 1 second
-    const steps = 60;
-    const increment = (targetValue - currentValue) / steps;
-    let currentStep = 0;
-    
-    const animation = setInterval(() => {
-        currentStep++;
-        const newValue = currentValue + (increment * currentStep);
-        percentageElement.textContent = Math.round(newValue);
         
-        if (currentStep >= steps) {
-            clearInterval(animation);
-            percentageElement.textContent = targetValue;
-        }
-    }, duration / steps);
-    
-    const now = moment();
-    const updateTime = moment(timestamp);
-    const diffMinutes = now.diff(updateTime, 'minutes');
-    
-    if (diffMinutes < 1) {
-        lastUpdateElement.textContent = 'just now';
-    } else if (diffMinutes < 60) {
-        lastUpdateElement.textContent = `${diffMinutes} minutes ago`;
-    } else {
-        lastUpdateElement.textContent = updateTime.fromNow();
+        modal.style.display = 'flex';
     }
-    
-    newsSummaryElement.textContent = newsSummary;
-    reasoningElement.textContent = reasoning;
-    
-    updateGaugeColor(percentage);
-    updateBackgroundEffects(percentage);
-}
 
-// Update the chart with new data
-function updateChart(percentage, timestamp) {
-    if (!historyChart) return;
-    
-    const date = moment(timestamp).format('YYYY-MM-DD');
-    
-    // Find existing data point for this date
-    const existingIndex = historyChart.data.labels.findIndex(label => label === date);
-    
-    if (existingIndex !== -1) {
-        // Update existing data point with new average
-        const currentData = historyChart.data.datasets[0].data[existingIndex];
-        const currentCount = historyChart._meta.dailyCount?.[existingIndex] || 1;
-        const newAverage = ((currentData * currentCount) + percentage) / (currentCount + 1);
-        
-        historyChart.data.datasets[0].data[existingIndex] = Math.round(newAverage * 10) / 10;
-        historyChart._meta.dailyCount = historyChart._meta.dailyCount || {};
-        historyChart._meta.dailyCount[existingIndex] = currentCount + 1;
-    } else {
-        // Add new data point
-        historyChart.data.labels.push(date);
-        historyChart.data.datasets[0].data.push(percentage);
-        historyChart._meta.dailyCount = historyChart._meta.dailyCount || {};
-        historyChart._meta.dailyCount[historyChart.data.labels.length - 1] = 1;
-    }
-    
-    // Update max value if necessary
-    if (percentage > maxEverValue) {
-        maxEverValue = percentage;
-        if (maxValueElement) {
-            maxValueElement.textContent = `${maxEverValue}%`;
+    updateTrendArrow(element, trend) {
+        switch(trend) {
+            case 'increasing':
+                element.textContent = '↗';
+                element.style.color = 'var(--doomsday-red)';
+                break;
+            case 'decreasing':
+                element.textContent = '↘';
+                element.style.color = 'var(--safe-color)';
+                break;
+            default:
+                element.textContent = '→';
+                element.style.color = 'var(--accent-orange)';
         }
     }
-    
-    // Update trend indicator using daily averages
-    const dataPoints = historyChart.data.datasets[0].data;
-    if (dataPoints.length >= 2) {
-        updateTrendIndicator(
-            dataPoints[dataPoints.length - 1],
-            dataPoints[dataPoints.length - 2]
-        );
+
+    setupMap() {
+        const container = document.getElementById('worldMap');
+        const width = container.clientWidth;
+        const height = container.clientHeight;
+
+        this.svg = d3.select('#worldMap')
+            .attr('width', width)
+            .attr('height', height);
+
+        this.projection = d3.geoNaturalEarth1()
+            .scale(width / 6.5)
+            .translate([width / 2, height / 2]);
+
+        this.path = d3.geoPath().projection(this.projection);
+
+        const zoom = d3.zoom()
+            .scaleExtent([1, 8])
+            .on('zoom', (event) => {
+                this.svg.selectAll('path')
+                    .attr('transform', event.transform);
+            });
+
+        this.svg.call(zoom);
+
+        this.loadWorldMap();
     }
-    
-    historyChart.update('none'); // Update without animation for smoother transitions
-}
 
-// Add floating animation keyframes
-const style = document.createElement('style');
-style.textContent = `
-@keyframes float {
-    0% { transform: translate(0, 0) rotate(0deg); }
-    25% { transform: translate(5px, -5px) rotate(90deg); }
-    50% { transform: translate(0, -10px) rotate(180deg); }
-    75% { transform: translate(-5px, -5px) rotate(270deg); }
-    100% { transform: translate(0, 0) rotate(360deg); }
-}
-@keyframes rotate {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}`;
-document.head.appendChild(style);
+    async loadWorldMap() {
+        try {
+            const world = await d3.json('/countries-110m.json');
+            this.worldData = topojson.feature(world, world.objects.countries);
 
-// Function to format date for display
-function formatDisplayDate(date) {
-    const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-    
-    if (date.toDateString() === today.toDateString()) {
-        return 'Today';
-    } else if (date.toDateString() === yesterday.toDateString()) {
-        return 'Yesterday';
-    } else {
-        return moment(date).format('MMMM D, YYYY');
-    }
-}
+            this.svg.selectAll('.country')
+                .data(this.worldData.features)
+                .enter()
+                .append('path')
+                .attr('class', 'country')
+                .attr('d', this.path)
+                .attr('data-name', d => d.properties.NAME)
+                .attr('data-id', d => d.id)
+                .on('click', (event, d) => this.selectCountry(d))
+                .on('mouseover', (event, d) => this.showTooltip(event, d))
+                .on('mouseout', () => this.hideTooltip());
 
-// Function to update daily summary
-async function updateDailySummary(date = new Date()) {
-    try {
-        const response = await fetch(`/api/daily-summary?date=${date.toISOString().split('T')[0]}`);
-        if (!response.ok) {
-            throw new Error('Failed to fetch daily summary');
-        }
-        
-        const summary = await response.json();
-        
-        // Update the UI
-        summaryDateElement.textContent = formatDisplayDate(new Date(summary.date));
-        dailyEventsElement.innerHTML = summary.key_events.replace(/\n/g, '<br>');
-        dailyImpactElement.textContent = summary.overall_impact;
-        
-    } catch (error) {
-        console.error('Error updating daily summary:', error);
-        summaryDateElement.textContent = 'Today';
-        dailyEventsElement.textContent = 'No summary available yet';
-        dailyImpactElement.textContent = 'Check back later for today\'s summary';
-    }
-}
-
-// Socket event handler for daily summary updates
-socket.on('daily_summary', (data) => {
-    updateDailySummary(new Date(data.date));
-});
-
-// Initialize the application
-async function init() {
-    try {
-        // Initialize chart first
-        initChart();
-        updateNextUpdateCountdown();
-        
-        // Fetch initial data
-        const response = await fetch('/api/history');
-        if (!response.ok) {
-            throw new Error('Failed to fetch data');
-        }
-        
-        const history = await response.json();
-        
-        if (history && history.length > 0) {
-            const latest = history[0];
-            
-            // Find max value in history
-            maxEverValue = Math.max(...history.map(entry => entry.worldend));
-            if (maxValueElement) {
-                maxValueElement.textContent = `${maxEverValue}%`;
+            // Try to color the map if data is already loaded
+            if (this.countriesData && Object.keys(this.countriesData).length > 0) {
+                this.updateMapColors();
             }
+
+        } catch (error) {
+            console.error('Error loading world map:', error);
+        }
+    }
+
+    selectCountry(countryData) {
+        this.svg.selectAll('.country').classed('selected', false);
+        
+        const countryElement = this.svg.selectAll('.country')
+            .filter(d => d.id === countryData.id);
+        
+        countryElement.classed('selected', true);
+        
+        this.selectedCountry = countryData;
+        this.updateCountryPanel(countryData);
+    }
+
+    showTooltip(event, countryData) {
+        const tooltip = document.getElementById('tooltip');
+        const countryName = countryData.properties.NAME || countryData.properties.name;
+        const countryInfo = this.getCountryInfo(countryName);
+        
+        tooltip.innerHTML = `
+            <div class="tooltip-title">${countryName}</div>
+            <div class="tooltip-risk">Threat Level: ${countryInfo.current_risk_level || 0}%</div>
+        `;
+        
+        tooltip.style.left = (event.pageX + 10) + 'px';
+        tooltip.style.top = (event.pageY - 10) + 'px';
+        tooltip.classList.add('visible');
+    }
+
+    hideTooltip() {
+        document.getElementById('tooltip').classList.remove('visible');
+    }
+
+    getCountryInfo(countryName) {
+        // Map TopoJSON names to database names
+        const nameMapping = {
+            'United States of America': 'United States',
+            'Russian Federation': 'Russia',
+            'Iran (Islamic Republic of)': 'Iran',
+            'Korea, Republic of': 'South Korea',
+            'Korea, Democratic People\'s Republic of': 'North Korea',
+            'Venezuela (Bolivarian Republic of)': 'Venezuela',
+            'Syrian Arab Republic': 'Syria',
+            'Egypt': 'Egypt',
+            'South Africa': 'South Africa',
+            'Nigeria': 'Nigeria',
+            'Ethiopia': 'Ethiopia',
+            'W. Sahara': 'Western Sahara',
+            'Dem. Rep. Congo': 'Democratic Republic of Congo',
+            'Central African Rep.': 'Central African Republic',
+            'S. Sudan': 'South Sudan',
+            'Bosnia and Herz.': 'Bosnia and Herzegovina',
+            'Czech Rep.': 'Czech Republic',
+            'Dominican Rep.': 'Dominican Republic',
+            'Eq. Guinea': 'Equatorial Guinea',
+            'North Macedonia': 'Macedonia',
+            'Solomon Is.': 'Solomon Islands',
+            'Trinidad and Tobago': 'Trinidad and Tobago',
+            'United Kingdom': 'United Kingdom',
+            'China': 'China',
+            'India': 'India',
+            'France': 'France',
+            'Germany': 'Germany',
+            'Japan': 'Japan',
+            'Brazil': 'Brazil',
+            'Canada': 'Canada',
+            'Australia': 'Australia',
+            'Italy': 'Italy',
+            'Spain': 'Spain',
+            'Mexico': 'Mexico',
+            'Turkey': 'Turkey',
+            'Saudi Arabia': 'Saudi Arabia',
+            'Israel': 'Israel',
+            'Pakistan': 'Pakistan',
+            'Afghanistan': 'Afghanistan',
+            'Ukraine': 'Ukraine',
+            'Iraq': 'Iraq',
+            'Syria': 'Syria'
+        };
+
+        const dbCountryName = nameMapping[countryName] || countryName;
+        return this.countriesData[dbCountryName] || { current_risk_level: 0, conflicts: [] };
+    }
+
+    updateCountryPanel(countryData) {
+        const panel = document.getElementById('countryPanel');
+        const countryName = countryData.properties.NAME || countryData.properties.name;
+        const countryInfo = this.getCountryInfo(countryName);
+        
+        document.getElementById('countryName').textContent = countryName;
+        
+        const riskElement = document.getElementById('countryRisk');
+        riskElement.textContent = `Threat: ${countryInfo.current_risk_level || 0}%`;
+        riskElement.className = `country-risk ${this.getRiskClass(countryInfo.current_risk_level || 0)}`;
+        
+        this.updateConflictsList(countryInfo.conflicts || []);
+        panel.style.display = 'block';
+    }
+
+    updateConflictsList(conflicts) {
+        const conflictsList = document.getElementById('conflictsList');
+        
+        if (conflicts.length === 0) {
+            conflictsList.innerHTML = '<p class="no-data">No active threats detected in this region</p>';
+            return;
+        }
+
+        conflictsList.innerHTML = conflicts.map(conflict => `
+            <div class="conflict-item">
+                <div class="conflict-title">${conflict.title}</div>
+                <div class="conflict-meta">
+                    <span class="conflict-type">${conflict.conflict_type}</span>
+                    <span class="conflict-severity severity-${conflict.severity}">
+                        Severity ${conflict.severity}/10
+                    </span>
+                </div>
+                <div class="conflict-description">${conflict.description}</div>
+            </div>
+        `).join('');
+    }
+
+    getRiskClass(risk) {
+        if (risk <= 33) return 'safe';
+        if (risk <= 66) return 'moderate';
+        if (risk <= 85) return 'high';
+        return 'critical';
+    }
+
+    updateMapColors() {
+        if (!this.svg || !this.countriesData) return;
+        
+        this.svg.selectAll('.country')
+            .each(function(d) {
+                const countryName = d.properties.NAME || d.properties.name;
+                const countryInfo = window.app.getCountryInfo(countryName);
+                const riskClass = window.app.getRiskClass(countryInfo.current_risk_level || 0);
+                
+                d3.select(this)
+                    .attr('class', `country ${riskClass}`);
+            });
+    }
+
+    setupEventListeners() {
+        document.getElementById('resetZoom').addEventListener('click', () => {
+            this.svg.transition()
+                .duration(750)
+                .call(
+                    d3.zoom().transform,
+                    d3.zoomIdentity
+                );
+        });
+
+        window.addEventListener('resize', () => this.handleResize());
+    }
+
+    handleResize() {
+        const container = document.getElementById('worldMap');
+        const width = container.clientWidth;
+        const height = container.clientHeight;
+
+        this.svg.attr('width', width).attr('height', height);
+        
+        this.projection
+            .scale(width / 6.5)
+            .translate([width / 2, height / 2]);
+
+        this.svg.selectAll('path').attr('d', this.path);
+    }
+
+    setupSocketListeners() {
+        socket.on('connect', () => {
+            this.updateStatus('Connected - Monitoring Active', 'connected');
+        });
+
+        socket.on('disconnect', () => {
+            this.updateStatus('Disconnected - Reconnecting...', 'disconnected');
+        });
+
+        socket.on('analysisUpdate', (data) => {
+            this.updateGlobalStats(data);
+            this.loadInitialData();
+        });
+    }
+
+    updateStatus(text, type) {
+        document.getElementById('statusText').textContent = text;
+        const statusDot = document.getElementById('statusDot');
+        statusDot.className = `status-dot ${type}`;
+    }
+
+    async loadInitialData() {
+        try {
+            await Promise.all([
+                this.loadCountries(),
+                this.loadConflicts(),
+                this.loadGlobalAnalysis()
+            ]);
             
-            // Update the display with the latest data
-            updateDisplay(
-                latest.worldend,
-                latest.news,
-                latest.reasoning,
-                new Date(latest.date)
-            );
+            // Ensure map colors are updated after all data is loaded
+            setTimeout(() => {
+                this.updateMapColors();
+            }, 100);
+        } catch (error) {
+            console.error('Error loading initial data:', error);
+        }
+    }
+
+    async loadCountries() {
+        try {
+            const response = await fetch('/api/countries');
+            const countries = await response.json();
             
-            // Update daily summary
-            updateDailySummary();
-            
-            // Clear existing chart data
-            historyChart.data.labels = [];
-            historyChart.data.datasets[0].data = [];
-            
-            // Add historical data in chronological order
-            const chronologicalHistory = history.slice().reverse();
-            chronologicalHistory.forEach(entry => {
-                updateChart(entry.worldend, new Date(entry.date));
+            this.countriesData = {};
+            countries.forEach(country => {
+                this.countriesData[country.name] = country;
             });
             
-            // Update trend with the last two entries if available
-            if (history.length >= 2) {
-                updateTrendIndicator(
-                    history[0].worldend,
-                    history[1].worldend
-                );
-            }
-        } else {
-            throw new Error('No historical data available');
+            // Update map colors after loading countries
+            this.updateMapColors();
+            
+        } catch (error) {
+            console.error('Error loading countries:', error);
         }
-    } catch (error) {
-        console.error('Error initializing application:', error);
-        // Handle error state in the UI
+    }
+
+    async loadConflicts() {
+        try {
+            const response = await fetch('/api/conflicts');
+            const conflicts = await response.json();
+            
+            // Group conflicts by country
+            this.conflictsData = conflicts;
+            Object.keys(this.countriesData).forEach(countryName => {
+                this.countriesData[countryName].conflicts = conflicts.filter(
+                    conflict => conflict.country_name === countryName
+                );
+            });
+            
+        } catch (error) {
+            console.error('Error loading conflicts:', error);
+        }
+    }
+
+    async loadGlobalAnalysis() {
+        try {
+            const response = await fetch('/api/global-analysis');
+            this.globalAnalysis = await response.json();
+            this.updateGlobalStats();
+            this.updateAnalysisPanel();
+        } catch (error) {
+            console.error('Error loading global analysis:', error);
+        }
+    }
+
+    updateGlobalStats(data = null) {
+        const analysis = data || this.globalAnalysis;
+        if (!analysis) return;
+
+        // Update threat level with dramatic formatting
+        const globalRisk = document.getElementById('globalRisk');
+        const riskValue = analysis.overall_risk_level || 0;
+        globalRisk.textContent = `${riskValue}%`;
+        
+        // Add pulsing effect for high threat levels
+        if (riskValue > 70) {
+            globalRisk.style.animation = 'pulse-red 2s ease-in-out infinite alternate';
+        } else {
+            globalRisk.style.animation = 'none';
+        }
+
+        document.getElementById('activeConflicts').textContent = analysis.active_conflicts_count || 0;
+        document.getElementById('highRiskCountries').textContent = analysis.high_risk_countries_count || 0;
+        document.getElementById('lastUpdate').textContent = 
+            analysis.created_at ? new Date(analysis.created_at).toLocaleString() : 'Never';
+    }
+
+    updateAnalysisPanel() {
+        if (!this.globalAnalysis) return;
+
+        // Update trend indicator
+        const trendIndicator = document.getElementById('trendIndicator');
+        const trendArrow = trendIndicator.querySelector('.trend-arrow');
+        const trendText = trendIndicator.querySelector('.trend-text');
+        
+        this.updateTrendArrow(trendArrow, this.globalAnalysis.trend_direction);
+        trendText.textContent = this.globalAnalysis.trend_direction || 'Unknown';
+
+        // Update key events
+        const keyEventsList = document.getElementById('keyEvents');
+        if (this.globalAnalysis.key_events && this.globalAnalysis.key_events.length > 0) {
+            keyEventsList.innerHTML = this.globalAnalysis.key_events
+                .map(event => `<li>${event}</li>`)
+                .join('');
+        } else {
+            keyEventsList.innerHTML = '<li>No critical events detected</li>';
+        }
+
+        // Update news summary
+        document.getElementById('newsSummary').textContent = 
+            this.globalAnalysis.news_summary || 'No current threat summary available';
+
+        this.updateRecentConflicts();
+    }
+
+    updateRecentConflicts() {
+        const recentConflicts = document.getElementById('recentConflicts');
+        
+        if (!this.conflictsData || this.conflictsData.length === 0) {
+            recentConflicts.innerHTML = '<p class="loading">No active threats detected</p>';
+            return;
+        }
+
+        // Sort by severity and show top 5
+        const topConflicts = this.conflictsData
+            .sort((a, b) => b.severity - a.severity)
+            .slice(0, 5);
+
+        recentConflicts.innerHTML = topConflicts.map(conflict => `
+            <div class="conflict-item" onclick="window.app.highlightCountryByName('${conflict.country_name}')">
+                <div class="conflict-title">${conflict.title}</div>
+                <div class="conflict-meta">
+                    <span class="conflict-type">${conflict.conflict_type}</span>
+                    <span class="conflict-severity severity-${conflict.severity}">
+                        Level ${conflict.severity}
+                    </span>
+                </div>
+                <div class="conflict-description">${conflict.description}</div>
+                <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem;">
+                    📍 ${conflict.country_name}
+                </div>
+            </div>
+        `).join('');
+    }
+
+    highlightCountryByName(countryName) {
+        if (!this.worldData) return;
+
+        const nameMapping = {
+            'United States': 'United States of America',
+            'Russia': 'Russian Federation',
+            'Iran': 'Iran (Islamic Republic of)',
+            'South Korea': 'Korea, Republic of',
+            'North Korea': 'Korea, Democratic People\'s Republic of',
+            'Venezuela': 'Venezuela (Bolivarian Republic of)',
+            'Syria': 'Syrian Arab Republic'
+        };
+
+        const mapCountryName = nameMapping[countryName] || countryName;
+        
+        const countryFeature = this.worldData.features.find(
+            feature => feature.properties.NAME === mapCountryName
+        );
+
+        if (countryFeature) {
+            this.selectCountry(countryFeature);
+        }
     }
 }
 
-// Socket event handlers
-socket.on('update', (data) => {
-    updateDisplay(
-        data.probability,
-        data.news_summary,
-        data.reasoning,
-        new Date(data.timestamp)
-    );
-    updateChart(data.probability, new Date(data.timestamp));
-});
-
-// Initialize the application
-init(); 
+// Initialize the app
+window.app = new GlobalThreatTracker(); 

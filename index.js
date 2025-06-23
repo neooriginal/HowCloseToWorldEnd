@@ -35,9 +35,9 @@ const apiLimiter = rateLimit({
 const swaggerDocument = {
     openapi: '3.0.0',
     info: {
-        title: 'World End Probability API',
+        title: 'Global Conflict Tracker API',
         version: '1.0.0',
-        description: 'API for accessing world end probability data and historical trends',
+        description: 'API for accessing global conflict data and country risk levels',
     },
     servers: [
         {
@@ -46,33 +46,25 @@ const swaggerDocument = {
         }
     ],
     paths: {
-        '/latest': {
+        '/countries': {
             get: {
-                summary: 'Get latest probability data',
+                summary: 'Get all countries with their risk levels',
                 responses: {
                     '200': {
-                        description: 'Latest probability data',
+                        description: 'Countries data with risk levels',
                         content: {
                             'application/json': {
                                 schema: {
-                                    type: 'object',
-                                    properties: {
-                                        worldend: {
-                                            type: 'number',
-                                            description: 'Current world end probability (0-100)',
-                                        },
-                                        news: {
-                                            type: 'string',
-                                            description: 'News summary',
-                                        },
-                                        reasoning: {
-                                            type: 'string',
-                                            description: 'AI reasoning for the probability',
-                                        },
-                                        date: {
-                                            type: 'string',
-                                            format: 'date-time',
-                                            description: 'Timestamp of the calculation',
+                                    type: 'array',
+                                    items: {
+                                        type: 'object',
+                                        properties: {
+                                            name: { type: 'string' },
+                                            iso_code: { type: 'string' },
+                                            continent: { type: 'string' },
+                                            region: { type: 'string' },
+                                            current_risk_level: { type: 'number' },
+                                            last_updated: { type: 'string', format: 'date-time' }
                                         }
                                     }
                                 }
@@ -82,25 +74,12 @@ const swaggerDocument = {
                 }
             }
         },
-        '/history': {
+        '/conflicts': {
             get: {
-                summary: 'Get historical probability data',
-                parameters: [
-                    {
-                        name: 'limit',
-                        in: 'query',
-                        description: 'Number of records to return (max 100)',
-                        required: false,
-                        schema: {
-                            type: 'integer',
-                            default: 10,
-                            maximum: 100
-                        }
-                    }
-                ],
+                summary: 'Get active conflicts',
                 responses: {
                     '200': {
-                        description: 'Historical probability data',
+                        description: 'Active conflicts data',
                         content: {
                             'application/json': {
                                 schema: {
@@ -108,24 +87,41 @@ const swaggerDocument = {
                                     items: {
                                         type: 'object',
                                         properties: {
-                                            worldend: {
-                                                type: 'number',
-                                                description: 'World end probability (0-100)',
-                                            },
-                                            news: {
-                                                type: 'string',
-                                                description: 'News summary',
-                                            },
-                                            reasoning: {
-                                                type: 'string',
-                                                description: 'AI reasoning for the probability',
-                                            },
-                                            date: {
-                                                type: 'string',
-                                                format: 'date-time',
-                                                description: 'Timestamp of the calculation',
-                                            }
+                                            title: { type: 'string' },
+                                            description: { type: 'string' },
+                                            severity: { type: 'number' },
+                                            conflict_type: { type: 'string' },
+                                            country_name: { type: 'string' },
+                                            iso_code: { type: 'string' },
+                                            risk_score: { type: 'number' }
                                         }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        '/global-analysis': {
+            get: {
+                summary: 'Get latest global analysis',
+                responses: {
+                    '200': {
+                        description: 'Latest global conflict analysis',
+                        content: {
+                            'application/json': {
+                                schema: {
+                                    type: 'object',
+                                    properties: {
+                                        overall_risk_level: { type: 'number' },
+                                        active_conflicts_count: { type: 'number' },
+                                        high_risk_countries_count: { type: 'number' },
+                                        news_summary: { type: 'string' },
+                                        ai_reasoning: { type: 'string' },
+                                        key_events: { type: 'array', items: { type: 'string' } },
+                                        trend_direction: { type: 'string' },
+                                        created_at: { type: 'string', format: 'date-time' }
                                     }
                                 }
                             }
@@ -174,376 +170,339 @@ const supabase = createClient(
 let lastAIUpdate = null;
 const MIN_AI_INTERVAL = 30 * 60 * 1000; // 30 minutes minimum between AI calls
 
-async function getNews(){
+async function getNews() {
     try {
-        // Check if enough time has passed since last update
-        if (lastAIUpdate && Date.now() - lastAIUpdate < MIN_AI_INTERVAL) {
-            console.log('Skipping news fetch - too soon since last update');
-            return false;
+        if (!process.env.NEWS_API_KEY) {
+            console.log('No News API key found, using fallback analysis');
+            return getFallbackNews();
         }
 
-        const response = await axios.get('https://newsapi.org/v2/top-headlines', {
-            params: {
-                apiKey: process.env.NEWS_API_KEY,
-                language: 'en',
-                sortBy: 'publishedAt',
-            }
+        const response = await fetch(`https://newsapi.org/v2/top-headlines?category=general&pageSize=50&apiKey=${process.env.NEWS_API_KEY}`);
+        
+        if (!response.ok) {
+            console.log('News API request failed, using fallback');
+            return getFallbackNews();
+        }
+        
+        const data = await response.json();
+        
+        if (!data.articles || data.articles.length === 0) {
+            console.log('No articles found, using fallback');
+            return getFallbackNews();
+        }
+        
+        const relevantArticles = data.articles.filter(article => {
+            const text = (article.title + ' ' + (article.description || '')).toLowerCase();
+            const conflictKeywords = ['war', 'conflict', 'crisis', 'tension', 'attack', 'violence', 'protest', 'sanctions', 'military', 'terrorism', 'security', 'threat', 'election', 'political'];
+            return conflictKeywords.some(keyword => text.includes(keyword));
         });
 
-        // Compare with last news to avoid unnecessary AI calls
-        if (lastNews && JSON.stringify(lastNews) === JSON.stringify(response.data)) {
-            console.log('Skipping AI update - no new news');
-            return false;
-        }
-
-        lastNews = response.data;
-        let toText = "";
-        for (const article of response.data.articles) {
-            if (article.title && (article.description || article.content)) {
-                toText += `${article.title}\n${article.description || ''}\n${article.content || ''}\n\n`;
-            }
-        }
-        return toText || false;
+        return relevantArticles.length > 0 ? relevantArticles : getFallbackNews();
     } catch (error) {
-        console.error('Error fetching news:', error);
-        return false;
+        console.error('Error fetching news:', error.message);
+        return getFallbackNews();
     }
+}
+
+function getFallbackNews() {
+    return [
+        {
+            title: "Global Political Tensions Rise",
+            description: "Current geopolitical tensions between major powers continue to escalate with ongoing conflicts in Ukraine, Middle East tensions, and trade disputes affecting global stability."
+        },
+        {
+            title: "Middle East Conflict Updates", 
+            description: "Ongoing conflicts in the Middle East region continue to affect regional stability, with particular focus on Syria, Iraq, and tensions between Israel and Palestinian territories."
+        },
+        {
+            title: "Eastern Europe Security Concerns",
+            description: "The situation in Ukraine remains a major concern for global security, with implications for NATO countries and regional stability in Eastern Europe."
+        },
+        {
+            title: "Asia-Pacific Regional Tensions",
+            description: "Tensions in the South China Sea and Korean Peninsula continue to be monitoring points for regional security and international relations."
+        },
+        {
+            title: "African Regional Conflicts",
+            description: "Various conflicts across Africa including situations in Ethiopia, Nigeria, and other regions continue to affect regional stability and humanitarian conditions."
+        }
+    ];
 }
 
 async function initializeDB() {
     try {
         // Test Supabase connection
-        const { data, error } = await supabase.from('history').select('id').limit(1);
+        const { data, error } = await supabase.from('countries').select('id').limit(1);
         if (error && error.code !== 'PGRST116') { // PGRST116 is "table not found" which is ok during first setup
             throw error;
         }
-        console.log('Supabase connection successful');
-
-        const UPDATE_INTERVAL = 6 * 60 * 60 * 1000; // 6 hours in milliseconds
-        setInterval(main, UPDATE_INTERVAL);
-        
-        // Generate daily summary at midnight
-        const now = new Date();
-        const midnight = new Date(now);
-        midnight.setHours(24, 0, 0, 0);
-        const timeUntilMidnight = midnight - now;
-        setTimeout(() => {
-            generateDailySummary();
-            // Then schedule it to run every 24 hours
-            setInterval(generateDailySummary, 24 * 60 * 60 * 1000);
-        }, timeUntilMidnight);
-
-        server.listen(3000, () => {
-            console.log('Server is running on port 3000');
-            console.log('API documentation available at /docs');
-        });
+        console.log('Database connection successful');
     } catch (error) {
-        console.error('Database initialization failed:', error);
-        process.exit(1);
+        console.error('Failed to initialize database:', error.message);
     }
 }
 
-async function saveWorldEnd(worldend, news, reasoning) {
+async function analyzeGlobalConflicts(newsArticles) {
     try {
-        // Convert worldend to a number and ensure it's within valid range
-        const worldendValue = parseFloat(worldend);
-        if (isNaN(worldendValue)) {
-            throw new Error('Invalid worldend value');
+        const prompt = `Analyze the following recent news articles and provide a comprehensive global conflict risk assessment. Focus on identifying specific countries mentioned and their current conflict situations.
+
+Recent news data:
+${newsArticles.map(article => `Title: ${article.title}\nContent: ${article.description || article.content || 'No content available'}\n---`).join('\n')}
+
+IMPORTANT: Return ONLY valid JSON with no additional text, explanations, or formatting. Provide a JSON response with the following structure:
+{
+  "overall_risk_level": number (0-100, current global threat level),
+  "countries": [
+    {
+      "name": "exact country name", 
+      "iso_code": "3-letter ISO code",
+      "risk_level": number (0-100),
+      "conflicts": [
+        {
+          "title": "brief conflict title",
+          "description": "1-2 sentence description", 
+          "severity": number (1-10),
+          "type": "war|political_unrest|economic|natural_disaster|terrorist|cyber|diplomatic",
+          "risk_score": number (0-100)
         }
-        // Round to 2 decimal places and ensure it's within bounds
-        const normalizedWorldend = Math.min(Math.max(Math.round(worldendValue * 100) / 100, 0), 100);
+      ]
+    }
+  ],
+  "key_events": ["key event 1", "key event 2", "key event 3"],
+  "trend_direction": "increasing|decreasing|stable", 
+  "news_summary": "2-3 sentence summary of global situation",
+  "ai_reasoning": "explanation of risk assessment methodology"
+}
+
+Focus on these priority countries if mentioned: United States, China, Russia, India, United Kingdom, France, Germany, Japan, Brazil, Canada, Australia, South Korea, Italy, Spain, Mexico, Turkey, Iran, Saudi Arabia, Israel, Pakistan, Afghanistan, Ukraine, Iraq, Syria, North Korea, Venezuela, Nigeria, South Africa, Egypt, Ethiopia.
+
+For countries not explicitly mentioned but known to have ongoing issues, include them with appropriate risk levels based on current global knowledge. Ensure at least 15-20 countries are analyzed to provide comprehensive global coverage.`;
+
+        const completion = await openai.chat.completions.create({
+            model: "openai/gpt-4o",
+            response_format: { type: "json_object" },
+            messages: [{ role: "user", content: prompt }],
+            temperature: 0.3,
+            max_tokens: 4000
+        });
+
+        let responseContent = completion.choices[0].message.content.trim();
         
-        const { error } = await supabase
-            .from('history')
-            .insert([
-                { 
-                    worldend: normalizedWorldend, 
-                    news, 
-                    reasoning 
-                }
-            ]);
-        
-        if (error) {
-            throw error;
+        // Extract JSON from response if it contains extra text
+        const jsonMatch = responseContent.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+            responseContent = jsonMatch[0];
         }
         
-        // Update last AI update timestamp
+        const result = JSON.parse(responseContent);
         lastAIUpdate = Date.now();
+        return result;
     } catch (error) {
-        console.error('Error saving world end data:', error);
-        throw error;
+        console.error('Error in AI analysis:', error.message);
+        return null;
     }
 }
 
-async function getWorldEnd() {
+async function saveGlobalAnalysis(analysis) {
     try {
         const { data, error } = await supabase
-            .from('history')
-            .select('*')
-            .order('date', { ascending: false })
-            .limit(10);
-        
-        if (error) {
-            throw error;
-        }
-        
-        return data || [];
+            .from('global_analysis')
+            .insert({
+                overall_risk_level: analysis.overall_risk_level,
+                active_conflicts_count: analysis.countries.reduce((total, country) => total + country.conflicts.length, 0),
+                high_risk_countries_count: analysis.countries.filter(c => c.risk_level > 60).length,
+                news_summary: analysis.news_summary,
+                ai_reasoning: analysis.ai_reasoning,
+                key_events: analysis.key_events,
+                trend_direction: analysis.trend_direction
+            })
+            .select()
+            .single();
+
+        if (error) throw error;
+        return data;
     } catch (error) {
-        console.error('Error fetching world end data:', error);
-        throw error;
+        console.error('Error saving global analysis:', error.message);
+        return null;
+    }
+}
+
+async function updateCountriesAndConflicts(analysis) {
+    try {
+        for (const countryData of analysis.countries) {
+            await supabase
+                .from('countries')
+                .upsert({
+                    name: countryData.name,
+                    iso_code: countryData.iso_code,
+                    current_risk_level: countryData.risk_level,
+                    last_updated: new Date().toISOString()
+                }, {
+                    onConflict: 'iso_code'
+                });
+
+            const { data: country } = await supabase
+                .from('countries')
+                .select('id')
+                .eq('iso_code', countryData.iso_code)
+                .single();
+
+            if (country && countryData.conflicts) {
+                await supabase
+                    .from('conflicts')
+                    .delete()
+                    .eq('country_id', country.id)
+                    .eq('status', 'active');
+
+                for (const conflict of countryData.conflicts) {
+                    await supabase
+                        .from('conflicts')
+                        .insert({
+                            country_id: country.id,
+                            title: conflict.title,
+                            description: conflict.description,
+                            severity: conflict.severity,
+                            conflict_type: conflict.type,
+                            risk_score: conflict.risk_score,
+                            status: 'active'
+                        });
+                }
+            }
+        }
+    } catch (error) {
+        console.error('Error updating countries and conflicts:', error.message);
     }
 }
 
 // API endpoints
-app.get('/api/latest', async (req, res) => {
+app.get('/api/countries', async (req, res) => {
     try {
         const { data, error } = await supabase
-            .from('history')
+            .from('countries')
             .select('*')
-            .order('date', { ascending: false })
-            .limit(1);
-        
-        if (error) {
-            throw error;
-        }
-        
-        res.json(data[0] || { error: 'No data available' });
+            .order('current_risk_level', { ascending: false });
+
+        if (error) throw error;
+        res.json(data);
     } catch (error) {
-        console.error('Error in /api/latest:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        console.error('Error fetching countries:', error.message);
+        res.status(500).json({ error: 'Failed to fetch countries' });
     }
 });
 
-app.get("/widget", (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'widget.html'));
+app.get('/api/conflicts', async (req, res) => {
+    try {
+        const { data, error } = await supabase
+            .from('conflicts')
+            .select(`
+                *,
+                countries (
+                    name,
+                    iso_code
+                )
+            `)
+            .eq('status', 'active')
+            .order('severity', { ascending: false });
+
+        if (error) throw error;
+        
+        const formattedData = data.map(conflict => ({
+            ...conflict,
+            country_name: conflict.countries.name,
+            iso_code: conflict.countries.iso_code
+        }));
+        
+        res.json(formattedData);
+    } catch (error) {
+        console.error('Error fetching conflicts:', error.message);
+        res.status(500).json({ error: 'Failed to fetch conflicts' });
+    }
 });
 
-app.get('/api/history', async (req, res) => {
+app.get('/api/global-analysis', async (req, res) => {
     try {
-        const limit = Math.min(Math.max(parseInt(req.query.limit) || 10, 1), 100);
         const { data, error } = await supabase
-            .from('history')
+            .from('global_analysis')
             .select('*')
-            .order('date', { ascending: false })
-            .limit(limit);
-        
-        if (error) {
-            throw error;
-        }
-        
-        res.json(data || []);
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single();
+
+        if (error) throw error;
+        res.json(data);
     } catch (error) {
-        console.error('Error in /api/history:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        console.error('Error fetching global analysis:', error.message);
+        res.status(500).json({ error: 'Failed to fetch global analysis' });
+    }
+});
+
+app.post('/api/trigger-analysis', async (req, res) => {
+    try {
+        console.log('Manual analysis trigger requested...');
+        await performGlobalAnalysis();
+        res.json({ success: true, message: 'Analysis triggered successfully' });
+    } catch (error) {
+        console.error('Error triggering analysis:', error.message);
+        res.status(500).json({ error: 'Failed to trigger analysis' });
     }
 });
 
 // Socket.io connection handling
 io.on('connection', (socket) => {
-    console.log('New client connected');
+    console.log('Client connected');
+    
     socket.on('disconnect', () => {
         console.log('Client disconnected');
     });
 });
 
-async function calculateWorldEnd(news){
-    const history = await getWorldEnd();
-    const prompt = `
-    you will be given news articles. based on the articles, respond with a % of how close the world is to extinguishing (0% = world piece, 100% = all icmbs launched). be very critical and think about it.
-    This can include climate, natural disasters, politics, space events, etc. only evaluate the news article if it happened right now (and not in the future / past)
-    You shouldnt go over 75% if its not a big event or dangerous event. Calculate the percentage based on global events, local events or small events are not as important.
-    IMPORANT: also note that previous events do not just go away and could still be relevant. use previous events and current events to calculate a more accurate percentage. try to keep it relatively constant and think about previous events and how permanent them are. usually you should only change the percentage by max 5%.
-    ALSO, BE CONSISTENT. CHECK THE HISTORY AND BE CONSISTENT WITH THE EVALUATION CRITERIA.
-
-    History of decisions:
-    ${history.map(h => `${h.date}: ${h.worldend} - ${h.news}`).join("\n")}
-
-    Respond in a JSON format:
-    {
-        "reasoning": "reasoning for the percentage",
-        "news_summary": "summary of the news article",
-        "worldend_probability": number between 0 and 100
-    }
-
-    News:
-    ${news.toString()}
-    `
+async function performGlobalAnalysis() {
     try {
-        const response = await openai.chat.completions.create({
-            model: "gpt-4o-mini",
-            messages: [{ role: "user", content: prompt }],
-            response_format: { type: "json_object" }
-        });
+        console.log('Starting global conflict analysis...');
+        const newsArticles = await getNews();
         
-        const worldend = JSON.parse(response.choices[0].message.content);
-        
-        // Handle the probability value more robustly
-        let probability;
-        if (typeof worldend.worldend_probability === 'number') {
-            probability = worldend.worldend_probability;
-        } else if (typeof worldend.worldend_probability === 'string') {
-            // Remove any % sign and convert to number
-            probability = parseFloat(worldend.worldend_probability.replace(/[^0-9.]/g, ''));
-        } else {
-            throw new Error('Invalid probability format received from AI');
-        }
-
-        // Validate the probability is within bounds
-        if (isNaN(probability) || probability < 0 || probability > 100) {
-            throw new Error('Probability out of valid range (0-100)');
-        }
-
-        await saveWorldEnd(probability, worldend.news_summary, worldend.reasoning);
-        
-        // Emit the new data to all connected clients
-        io.emit('update', {
-            probability,
-            news_summary: worldend.news_summary,
-            reasoning: worldend.reasoning,
-            timestamp: new Date()
-        });
-        
-        return worldend;
-    } catch (error) {
-        console.error('Error in calculateWorldEnd:', error);
-        // Return a safe fallback or rethrow depending on your needs
-        throw error;
-    }
-}
-
-async function main(){
-    try {
-        const news = await getNews();
-        if (news) {
-            const worldend = await calculateWorldEnd(news);
-            console.log('AI update completed successfully');
-        } else {
-            console.log('Skipping AI update - no new data or too soon');
-        }
-    } catch (error) {
-        console.error('Error in main loop:', error);
-    }
-}
-
-async function generateDailySummary() {
-    try {
-        // Get yesterday's date
-        const yesterday = new Date();
-        yesterday.setDate(yesterday.getDate() - 1);
-        yesterday.setHours(0, 0, 0, 0);
-        
-        const todayStart = new Date(yesterday);
-        todayStart.setDate(todayStart.getDate() + 1);
-        
-        // Get all events from yesterday
-        const { data: events, error } = await supabase
-            .from('history')
-            .select('*')
-            .gte('date', yesterday.toISOString())
-            .lt('date', todayStart.toISOString())
-            .order('date', { ascending: true });
-        
-        if (error) {
-            throw error;
-        }
-        
-        if (events.length === 0) {
-            console.log('No events to summarize for yesterday');
+        if (!newsArticles) {
+            console.log('No new news to analyze');
             return;
         }
-        
-        // Calculate average worldend value
-        const avgWorldend = events.reduce((acc, event) => acc + event.worldend, 0) / events.length;
-        
-        // Combine all news and reasoning for the day
-        const allNews = events.map(e => e.news).join('\n');
-        const allReasoning = events.map(e => e.reasoning).join('\n');
-        
-        // Generate summary using AI
-        const prompt = `
-            Based on the following news and reasoning from the past 24 hours, provide a concise daily summary.
-            Focus on the most significant events and their global impact.
-            
-            News from the past 24 hours:
-            ${allNews}
-            
-            Reasoning provided:
-            ${allReasoning}
-            
-            Average world end probability: ${avgWorldend.toFixed(2)}%
-            
-            Respond in JSON format:
-            {
-                "key_events": "Bullet point list of the most important events",
-                "overall_impact": "Analysis of the day's overall impact on global stability"
-            }
-        `;
-        
-        const response = await openai.chat.completions.create({
-            model: "gpt-4o-mini",
-            messages: [{ role: "user", content: prompt }],
-            response_format: { type: "json_object" }
-        });
-        
-        const summary = JSON.parse(response.choices[0].message.content);
-        
-        // Save the daily summary (using upsert)
-        const { error: upsertError } = await supabase
-            .from('daily_summaries')
-            .upsert([
-                {
-                    date: yesterday.toISOString().split('T')[0],
-                    key_events: summary.key_events,
-                    overall_impact: summary.overall_impact,
-                    average_worldend: avgWorldend
-                }
-            ]);
-        
-        if (upsertError) {
-            throw upsertError;
+
+        const analysis = await analyzeGlobalConflicts(newsArticles);
+        if (!analysis) {
+            console.log('AI analysis failed');
+            return;
         }
-        
-        // Emit the new summary to all connected clients
-        io.emit('daily_summary', {
-            date: yesterday.toISOString().split('T')[0],
-            key_events: summary.key_events,
-            overall_impact: summary.overall_impact,
-            average_worldend: avgWorldend
+
+        await saveGlobalAnalysis(analysis);
+        await updateCountriesAndConflicts(analysis);
+
+        io.emit('analysisUpdate', {
+            overall_risk_level: analysis.overall_risk_level,
+            active_conflicts_count: analysis.countries.reduce((total, country) => total + country.conflicts.length, 0),
+            high_risk_countries_count: analysis.countries.filter(c => c.risk_level > 60).length,
+            timestamp: new Date().toISOString()
         });
-        
-        console.log('Daily summary generated successfully');
+
+        console.log('Global analysis completed successfully');
     } catch (error) {
-        console.error('Error generating daily summary:', error);
+        console.error('Error in global analysis:', error.message);
     }
 }
 
-// Add new endpoint to get daily summaries
-app.get('/api/daily-summary', async (req, res) => {
-    try {
-        const date = req.query.date ? new Date(req.query.date) : new Date();
-        date.setHours(0, 0, 0, 0);
-        
-        const { data, error } = await supabase
-            .from('daily_summaries')
-            .select('*')
-            .eq('date', date.toISOString().split('T')[0])
-            .limit(1);
-        
-        if (error) {
-            throw error;
-        }
-        
-        if (data && data.length > 0) {
-            res.json(data[0]);
-        } else {
-            res.status(404).json({ error: 'No summary available for this date' });
-        }
-    } catch (error) {
-        console.error('Error in /api/daily-summary:', error);
-        res.status(500).json({ error: 'Internal server error' });
-    }
-});
+async function main() {
+    await initializeDB();
+    
+    // Run analysis immediately on startup
+    console.log('Running initial global analysis...');
+    await performGlobalAnalysis();
+    
+    // Then run every 6 hours
+    setInterval(performGlobalAnalysis, 6 * 60 * 60 * 1000);
+}
 
-initializeDB();
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+    main().catch(console.error);
+});
 
 
