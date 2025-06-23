@@ -63,19 +63,17 @@ Want to run your own private threat assessment? Here's how to set up your person
 
 > *"In the final moments, only the prepared survive."*
 
-**Quick Start with Docker - No Repository Cloning Required:**
+**One-Command Deployment - No Building Required!**
 
-1. **Create Your Deployment Directory**
+Uses pre-built images from GitHub Container Registry for instant deployment.
+
+1. **Download the Configuration**
    ```bash
-   mkdir howclosetoworldend
-   cd howclosetoworldend
+   curl -o docker-compose.yml https://raw.githubusercontent.com/neooriginal/HowCloseToWorldEnd/main/docker-compose.yml
    ```
 
-2. **Download the Docker Compose Configuration**
-   Clone the [Docker Compose File](https://github.com/neooriginal/HowCloseToWorldEnd/blob/main/docker-compose.yml)
-
-3. **Configure Your Intelligence Network**
-   Create `.env` with your secret credentials:
+2. **Set Your Environment Variables**
+   Create a `.env` file in the same directory:
    ```env
    # Your Database of Doom
    SUPABASE_URL=https://your-project-id.supabase.co
@@ -86,18 +84,16 @@ Want to run your own private threat assessment? Here's how to set up your person
    OPENROUTER_API_KEY=your_openrouter_key
    ```
 
-4. **Initialize the Database** 
+3. **Initialize Your Database** 
    - Create a [Supabase](https://supabase.com) project
    - Download and run the [`init.sql`](https://github.com/neooriginal/HowCloseToWorldEnd/blob/main/init.sql) script in your SQL Editor
-   - This creates the tables that will track humanity's demise
 
-5. **Launch the Doomsday Monitor**
+4. **Deploy in Seconds**
    ```bash
    docker-compose up -d
    ```
 
-6. **Monitor the Apocalypse**
-   Your doomsday dashboard will be live at `http://localhost:3000`
+That's it! Your doomsday dashboard is live at `http://localhost:3000`
 
 ### **🛠️ Local Development Installation**
 
