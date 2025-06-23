@@ -54,12 +54,73 @@ Every day, our world teeters on the edge of chaos. **How Close To World End** cu
 Want to run your own private threat assessment? Here's how to set up your personal early warning system:
 
 ### **Prerequisites for Survival**
-- Node.js v18+ (because the world might end before v17 gets security updates)
+- Docker & Docker Compose (for containerized deployment) **OR** Node.js v18+ (for local development)
 - Supabase account (cloud database for when local infrastructure fails)
 - NewsAPI key (your pipeline to global intelligence)
 - OpenRouter API key (for GPT-4 powered threat analysis)
 
-### **Installation: 5 Steps to Enlightenment**
+### **🐳 Docker Deployment (Recommended)**
+
+> *"In the final moments, only the prepared survive."*
+
+**Quick Start with Docker:**
+
+1. **Clone the Repository of Truth**
+   ```bash
+   git clone https://github.com/Neotastisch/HowCloseToWorldEnd.git
+   cd HowCloseToWorldEnd
+   ```
+
+2. **Configure Your Intelligence Network**
+   Create `.env` with your secret credentials:
+   ```env
+   # Your Database of Doom
+   SUPABASE_URL=https://your-project-id.supabase.co
+   SUPABASE_ANON_KEY=your_supabase_anon_key
+
+   # Intelligence Gathering APIs
+   NEWS_API_KEY=your_newsapi_key
+   OPENROUTER_API_KEY=your_openrouter_key
+
+   # Docker Configuration
+   GITHUB_REPOSITORY=your-username/howclosetoworldend
+   ```
+
+3. **Initialize the Database** 
+   - Create a [Supabase](https://supabase.com) project
+   - Run the `init.sql` script in your SQL Editor
+   - This creates the tables that will track humanity's demise
+
+4. **Launch with Docker Compose**
+   ```bash
+   # Pull and run the latest image
+   docker-compose up -d
+   
+   # Or build locally
+   docker-compose up --build -d
+   ```
+
+5. **Monitor the Apocalypse**
+   Your doomsday dashboard will be live at `http://localhost:3000`
+
+**Docker Management Commands:**
+```bash
+# View logs
+docker-compose logs -f
+
+# Stop the system
+docker-compose down
+
+# Update to latest version
+docker-compose pull && docker-compose up -d
+
+# Clean rebuild
+docker-compose down && docker-compose build --no-cache && docker-compose up -d
+```
+
+### **🛠️ Local Development Installation**
+
+> *"Sometimes you need to see the code to believe the end is near."*
 
 1. **Clone the Repository of Truth**
    ```bash
@@ -95,6 +156,16 @@ Want to run your own private threat assessment? Here's how to set up your person
    ```
 
 Your personal doomsday dashboard will be live at `http://localhost:3000`
+
+### **🚀 Automated Docker Builds**
+
+This repository includes GitHub Actions that automatically:
+- ✅ Build Docker images on every push to `main` and `develop`
+- ✅ Push images to GitHub Container Registry (`ghcr.io`)
+- ✅ Tag releases with semantic versions
+- ✅ Optimize builds with layer caching
+
+Images are available at: `ghcr.io/your-username/howclosetoworldend:latest`
 
 ---
 
