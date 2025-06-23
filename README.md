@@ -195,7 +195,7 @@ This project is licensed for personal use and self-hosting. Commercial use requi
 
 ---
 
-**[🚀 Launch Your Doomsday Dashboard](https://worldend.neoserver.dev) | [📖 API Documentation](https://worldend.neoserver.dev/docs) | [🐛 Report Issues](https://github.com/neooriginal/HowCloseToWorldEnd/issues)**
+[🐛 Report Issues](https://github.com/neooriginal/HowCloseToWorldEnd/issues)
 
 *Stay informed. Stay alive. The world is counting on it.*
  
