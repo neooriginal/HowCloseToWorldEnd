@@ -2,7 +2,7 @@
 
 A real-time AI-powered dashboard that analyzes global news to estimate how close we are to potential world-ending scenarios. The system uses advanced AI to process current events and calculate a probability score, providing insights into global stability.
 
-![image](https://github.com/user-attachments/assets/f5273b02-5934-43f5-af48-9e4f6c215e07)
+<img width="1372" alt="Bildschirmfoto 2025-06-23 um 14 11 05" src="https://github.com/user-attachments/assets/56cc0619-d23b-4e8f-8057-763d673e0085" />
 
 
 ## 🌟 Features
