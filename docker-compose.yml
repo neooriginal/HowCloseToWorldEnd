@@ -2,10 +2,7 @@ version: '3.8'
 
 services:
   app:
-    image: ghcr.io/neooriginal/HowCloseToWorldEnd:latest
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ghcr.io/neooriginal/howclosetoworldend:latest
     ports:
       - "3000:3000"
     environment:
