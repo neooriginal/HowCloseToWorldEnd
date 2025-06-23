@@ -6,11 +6,7 @@
 
 In an era where nuclear tensions rise, climate disasters intensify, and geopolitical conflicts spiral out of control, **How Close To World End** provides the sobering answer through cutting-edge AI analysis of global intelligence.
 
-<<<<<<< Updated upstream
 <img width="1372" alt="Bildschirmfoto 2025-06-23 um 14 11 05" src="https://github.com/user-attachments/assets/56cc0619-d23b-4e8f-8057-763d673e0085" />
-=======
-![Threat Level Dashboard](https://github.com/user-attachments/assets/f5273b02-5934-43f5-af48-9e4f6c215e07)
->>>>>>> Stashed changes
 
 ---
 
