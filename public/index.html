@@ -27,6 +27,7 @@
     <script src="/socket.io/socket.io.js"></script>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="https://unpkg.com/topojson@3"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
 
 </head>
 <body>
@@ -187,6 +188,56 @@
                 </div>
             </div>
         </main>
+
+        <!-- Extended Content Section -->
+        <section class="extended-content">
+            <div class="content-container">
+                <!-- History Graph Section -->
+                <div class="history-section">
+                    <div class="section-header">
+                        <h2>Global Threat History</h2>
+                        <p class="section-subtitle">Historical analysis of global threat levels over time</p>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="threatHistoryChart"></canvas>
+                    </div>
+                    <div class="chart-controls">
+                        <button class="chart-btn active" data-period="24h">24 Hours</button>
+                        <button class="chart-btn" data-period="7d">7 Days</button>
+                        <button class="chart-btn" data-period="30d">30 Days</button>
+                        <button class="chart-btn" data-period="1y">1 Year</button>
+                    </div>
+                </div>
+
+                <!-- Latest News Section -->
+                <div class="news-section">
+                    <div class="section-header">
+                        <h2>Latest Global Intelligence</h2>
+                        <p class="section-subtitle">Real-time news and intelligence reports affecting global stability</p>
+                    </div>
+                    <div class="news-grid">
+                        <div class="news-column">
+                            <h3>Breaking Intelligence</h3>
+                            <div id="breakingNews" class="news-list">
+                                <div class="news-loading">Scanning global intelligence networks...</div>
+                            </div>
+                        </div>
+                        <div class="news-column">
+                            <h3>Geopolitical Updates</h3>
+                            <div id="geopoliticalNews" class="news-list">
+                                <div class="news-loading">Analyzing geopolitical developments...</div>
+                            </div>
+                        </div>
+                        <div class="news-column">
+                            <h3>Security Briefings</h3>
+                            <div id="securityNews" class="news-list">
+                                <div class="news-loading">Monitoring security developments...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
     </div>
 
     <script src="app.js"></script>
