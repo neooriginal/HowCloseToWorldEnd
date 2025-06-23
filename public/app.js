@@ -10,10 +10,14 @@ class GlobalThreatTracker {
         this.conflictsData = [];
         this.globalAnalysis = null;
         this.selectedCountry = null;
+        this.timerInterval = null;
+        this.lastAnalysisTime = null;
+        this.analysisInterval = 6 * 60 * 60 * 1000; // 6 hours in milliseconds
         
         this.init();
         this.setupSocketListeners();
         this.loadInitialData();
+        this.startTimer();
     }
 
     init() {
@@ -283,9 +287,9 @@ class GlobalThreatTracker {
             this.svg.transition()
                 .duration(750)
                 .call(
-                    d3.zoom().transform,
-                    d3.zoomIdentity
-                );
+                d3.zoom().transform,
+                d3.zoomIdentity
+            );
         });
 
         window.addEventListener('resize', () => this.handleResize());
@@ -317,6 +321,8 @@ class GlobalThreatTracker {
         socket.on('analysisUpdate', (data) => {
             this.updateGlobalStats(data);
             this.loadInitialData();
+            // Reset timer when new analysis comes in
+            this.lastAnalysisTime = Date.now();
         });
     }
 
@@ -336,7 +342,7 @@ class GlobalThreatTracker {
             
             // Ensure map colors are updated after all data is loaded
             setTimeout(() => {
-                this.updateMapColors();
+            this.updateMapColors();
             }, 100);
         } catch (error) {
             console.error('Error loading initial data:', error);
@@ -393,7 +399,7 @@ class GlobalThreatTracker {
     updateGlobalStats(data = null) {
         const analysis = data || this.globalAnalysis;
         if (!analysis) return;
-
+        
         // Update threat level with dramatic formatting
         const globalRisk = document.getElementById('globalRisk');
         const riskValue = analysis.overall_risk_level || 0;
@@ -408,13 +414,19 @@ class GlobalThreatTracker {
 
         document.getElementById('activeConflicts').textContent = analysis.active_conflicts_count || 0;
         document.getElementById('highRiskCountries').textContent = analysis.high_risk_countries_count || 0;
-        document.getElementById('lastUpdate').textContent = 
-            analysis.created_at ? new Date(analysis.created_at).toLocaleString() : 'Never';
+        
+        // Update last analysis time for countdown
+        if (analysis.created_at) {
+            this.lastAnalysisTime = new Date(analysis.created_at).getTime();
+            document.getElementById('lastUpdate').textContent = new Date(analysis.created_at).toLocaleString();
+        } else {
+            document.getElementById('lastUpdate').textContent = 'Never';
+        }
     }
 
     updateAnalysisPanel() {
         if (!this.globalAnalysis) return;
-
+        
         // Update trend indicator
         const trendIndicator = document.getElementById('trendIndicator');
         const trendArrow = trendIndicator.querySelector('.trend-arrow');
@@ -432,7 +444,7 @@ class GlobalThreatTracker {
         } else {
             keyEventsList.innerHTML = '<li>No critical events detected</li>';
         }
-
+        
         // Update news summary
         document.getElementById('newsSummary').textContent = 
             this.globalAnalysis.news_summary || 'No current threat summary available';
@@ -447,12 +459,12 @@ class GlobalThreatTracker {
             recentConflicts.innerHTML = '<p class="loading">No active threats detected</p>';
             return;
         }
-
+        
         // Sort by severity and show top 5
         const topConflicts = this.conflictsData
             .sort((a, b) => b.severity - a.severity)
             .slice(0, 5);
-
+        
         recentConflicts.innerHTML = topConflicts.map(conflict => `
             <div class="conflict-item" onclick="window.app.highlightCountryByName('${conflict.country_name}')">
                 <div class="conflict-title">${conflict.title}</div>
@@ -488,9 +500,59 @@ class GlobalThreatTracker {
         const countryFeature = this.worldData.features.find(
             feature => feature.properties.NAME === mapCountryName
         );
-
+        
         if (countryFeature) {
             this.selectCountry(countryFeature);
+        }
+    }
+
+    startTimer() {
+        // Start the countdown timer
+        this.timerInterval = setInterval(() => {
+            this.updateCountdown();
+        }, 1000);
+        
+        // Initial countdown update
+        this.updateCountdown();
+    }
+
+    updateCountdown() {
+        if (!this.lastAnalysisTime) {
+            document.getElementById('nextScanTimer').textContent = '--:--:--';
+            return;
+        }
+
+        const now = Date.now();
+        const timeSinceLastAnalysis = now - this.lastAnalysisTime;
+        const timeUntilNext = this.analysisInterval - timeSinceLastAnalysis;
+
+        if (timeUntilNext <= 0) {
+            document.getElementById('nextScanTimer').textContent = 'Scanning...';
+            return;
+        }
+
+        const hours = Math.floor(timeUntilNext / (1000 * 60 * 60));
+        const minutes = Math.floor((timeUntilNext % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((timeUntilNext % (1000 * 60)) / 1000);
+
+        const formattedTime = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        document.getElementById('nextScanTimer').textContent = formattedTime;
+
+        // Add urgency styling for last 30 minutes
+        const timerElement = document.getElementById('nextScanTimer');
+        if (timeUntilNext < 30 * 60 * 1000) {
+            timerElement.style.color = 'var(--doomsday-red)';
+            timerElement.style.animation = 'pulse-red 2s ease-in-out infinite alternate';
+        } else {
+            timerElement.style.color = 'var(--accent-orange)';
+            timerElement.style.animation = 'none';
+        }
+    }
+
+    // Cleanup method
+    destroy() {
+        if (this.timerInterval) {
+            clearInterval(this.timerInterval);
         }
     }
 }

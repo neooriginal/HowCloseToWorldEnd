@@ -34,29 +34,33 @@
         <header class="app-header">
             <div class="header-content">
                 <div class="header-left">
-                    <h1 class="app-title">HOW CLOSE TO <span class="world-end">WORLD END</span></h1>
-                    <div class="subtitle">Global Catastrophe Risk Assessment</div>
-                    <div class="status-indicator">
-                        <span class="status-dot" id="statusDot"></span>
-                        <span id="statusText">Monitoring Global Threats</span>
+                    <div class="title-section">
+                        <h1 class="app-title">HOW CLOSE TO <span class="world-end">WORLD END</span></h1>
+                        <div class="status-indicator">
+                            <span class="status-dot" id="statusDot"></span>
+                            <span id="statusText">Monitoring Global Threats</span>
+                        </div>
                     </div>
                 </div>
-                <div class="header-right">
+                
+                <div class="header-center">
                     <div class="doomsday-clock">
                         <div class="clock-container">
                             <div class="clock-title">THREAT LEVEL</div>
                             <div class="clock-percentage">
                                 <span class="percentage-value" id="globalRisk">--</span>
                                 <button class="info-icon" id="reasoningBtn" title="Show AI Reasoning">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
                                         <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
                                     </svg>
                                 </button>
                             </div>
-                            <div class="clock-subtitle">TO GLOBAL CATASTROPHE</div>
                         </div>
                     </div>
-                    <div class="global-stats">
+                </div>
+
+                <div class="header-right">
+                    <div class="stats-grid">
                         <div class="stat-item">
                             <span class="stat-value" id="activeConflicts">--</span>
                             <span class="stat-label">Active Threats</span>
@@ -64,6 +68,10 @@
                         <div class="stat-item">
                             <span class="stat-value" id="highRiskCountries">--</span>
                             <span class="stat-label">Critical Zones</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value" id="nextScanTimer">--:--:--</span>
+                            <span class="stat-label">Next Scan In</span>
                         </div>
                     </div>
                     <div class="last-update">
