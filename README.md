@@ -63,15 +63,18 @@ Want to run your own private threat assessment? Here's how to set up your person
 
 > *"In the final moments, only the prepared survive."*
 
-**Quick Start with Docker:**
+**Quick Start with Docker - No Repository Cloning Required:**
 
-1. **Clone the Repository of Truth**
+1. **Create Your Deployment Directory**
    ```bash
-   git clone https://github.com/Neotastisch/HowCloseToWorldEnd.git
-   cd HowCloseToWorldEnd
+   mkdir howclosetoworldend
+   cd howclosetoworldend
    ```
 
-2. **Configure Your Intelligence Network**
+2. **Download the Docker Compose Configuration**
+   Clone the [Docker Compose File](https://github.com/neooriginal/HowCloseToWorldEnd/blob/main/docker-compose.yml)
+
+3. **Configure Your Intelligence Network**
    Create `.env` with your secret credentials:
    ```env
    # Your Database of Doom
@@ -81,42 +84,20 @@ Want to run your own private threat assessment? Here's how to set up your person
    # Intelligence Gathering APIs
    NEWS_API_KEY=your_newsapi_key
    OPENROUTER_API_KEY=your_openrouter_key
-
-   # Docker Configuration
-   GITHUB_REPOSITORY=your-username/howclosetoworldend
    ```
 
-3. **Initialize the Database** 
+4. **Initialize the Database** 
    - Create a [Supabase](https://supabase.com) project
-   - Run the `init.sql` script in your SQL Editor
+   - Download and run the [`init.sql`](https://github.com/neooriginal/HowCloseToWorldEnd/blob/main/init.sql) script in your SQL Editor
    - This creates the tables that will track humanity's demise
 
-4. **Launch with Docker Compose**
+5. **Launch the Doomsday Monitor**
    ```bash
-   # Pull and run the latest image
    docker-compose up -d
-   
-   # Or build locally
-   docker-compose up --build -d
    ```
 
-5. **Monitor the Apocalypse**
+6. **Monitor the Apocalypse**
    Your doomsday dashboard will be live at `http://localhost:3000`
-
-**Docker Management Commands:**
-```bash
-# View logs
-docker-compose logs -f
-
-# Stop the system
-docker-compose down
-
-# Update to latest version
-docker-compose pull && docker-compose up -d
-
-# Clean rebuild
-docker-compose down && docker-compose build --no-cache && docker-compose up -d
-```
 
 ### **🛠️ Local Development Installation**
 
@@ -124,7 +105,7 @@ docker-compose down && docker-compose build --no-cache && docker-compose up -d
 
 1. **Clone the Repository of Truth**
    ```bash
-   git clone https://github.com/Neotastisch/HowCloseToWorldEnd.git
+   git clone https://github.com/neooriginal/HowCloseToWorldEnd.git
    cd HowCloseToWorldEnd
    ```
 
@@ -156,18 +137,6 @@ docker-compose down && docker-compose build --no-cache && docker-compose up -d
    ```
 
 Your personal doomsday dashboard will be live at `http://localhost:3000`
-
-### **🚀 Automated Docker Builds**
-
-This repository includes GitHub Actions that automatically:
-- ✅ Build Docker images on every push to `main` and `develop`
-- ✅ Push images to GitHub Container Registry (`ghcr.io`)
-- ✅ Tag releases with semantic versions
-- ✅ Optimize builds with layer caching
-
-Images are available at: `ghcr.io/your-username/howclosetoworldend:latest`
-
----
 
 ## 📡 **API: For Those Who Code at the Edge of Tomorrow**
 
@@ -230,7 +199,7 @@ This project is licensed for personal use and self-hosting. Commercial use requi
 
 ---
 
-**[🚀 Launch Your Doomsday Dashboard](https://worldend.neoserver.dev) | [📖 API Documentation](https://worldend.neoserver.dev/docs) | [🐛 Report Issues](https://github.com/Neotastisch/HowCloseToWorldEnd/issues)**
+**[🚀 Launch Your Doomsday Dashboard](https://worldend.neoserver.dev) | [📖 API Documentation](https://worldend.neoserver.dev/docs) | [🐛 Report Issues](https://github.com/neooriginal/HowCloseToWorldEnd/issues)**
 
 *Stay informed. Stay alive. The world is counting on it.*
  
