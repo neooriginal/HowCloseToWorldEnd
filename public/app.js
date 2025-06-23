@@ -671,24 +671,49 @@ class GlobalThreatTracker {
     async updateChart() {
         if (!this.threatChart) return;
 
-        // Load real historical data from API instead of generating fake data
         try {
-            const response = await fetch('/api/global-analysis');
-            const analysis = await response.json();
+            const response = await fetch(`/api/historical-analysis?period=${this.currentChartPeriod}`);
+            const historicalData = await response.json();
             
-            if (analysis) {
-                // For now, just show current data point until we have real historical data
-                const data = {
-                    labels: ['Current'],
-                    values: [analysis.overall_risk_level || 0]
-                };
+            if (historicalData && historicalData.length > 0) {
+                const labels = historicalData.map(entry => {
+                    const date = new Date(entry.created_at);
+                    return this.formatDateForPeriod(date, this.currentChartPeriod);
+                });
                 
-                this.threatChart.data.labels = data.labels;
-                this.threatChart.data.datasets[0].data = data.values;
+                const values = historicalData.map(entry => entry.overall_risk_level);
+                
+                this.threatChart.data.labels = labels;
+                this.threatChart.data.datasets[0].data = values;
                 this.threatChart.update();
+            } else {
+                // If no historical data, show current point only
+                const currentResponse = await fetch('/api/global-analysis');
+                const currentAnalysis = await currentResponse.json();
+                
+                if (currentAnalysis) {
+                    this.threatChart.data.labels = ['Current'];
+                    this.threatChart.data.datasets[0].data = [currentAnalysis.overall_risk_level || 0];
+                    this.threatChart.update();
+                }
             }
         } catch (error) {
             console.error('Error loading chart data:', error);
+        }
+    }
+
+    formatDateForPeriod(date, period) {
+        switch(period) {
+            case '24h':
+                return date.toLocaleTimeString('en-US', {hour: '2-digit', minute: '2-digit'});
+            case '7d':
+                return date.toLocaleDateString('en-US', {month: 'short', day: 'numeric'});
+            case '30d':
+                return date.toLocaleDateString('en-US', {month: 'short', day: 'numeric'});
+            case '1y':
+                return date.toLocaleDateString('en-US', {month: 'short', year: '2-digit'});
+            default:
+                return date.toLocaleTimeString('en-US', {hour: '2-digit', minute: '2-digit'});
         }
     }
 

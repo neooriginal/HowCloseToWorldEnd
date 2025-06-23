@@ -153,8 +153,6 @@ app.use((req, res, next) => {
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-let lastNews = undefined
-
 const openai = new openai_lib({
     apiKey: process.env.OPENROUTER_API_KEY,
     baseURL: 'https://openrouter.ai/api/v1',
@@ -190,13 +188,42 @@ async function getNews() {
             console.log('No articles found');
             return null;
         }
-        
+
+        // Better filtering for high-quality conflict news
         const relevantArticles = data.articles.filter(article => {
-            const text = (article.title + ' ' + (article.description || '')).toLowerCase();
-            const conflictKeywords = ['war', 'conflict', 'crisis', 'tension', 'attack', 'violence', 'protest', 'sanctions', 'military', 'terrorism', 'security', 'threat', 'election', 'political'];
-            return conflictKeywords.some(keyword => text.includes(keyword));
+            if (!article.title || !article.description) return false;
+            
+            const text = (article.title + ' ' + article.description).toLowerCase();
+            
+            // High priority conflict keywords
+            const highPriorityKeywords = [
+                'war', 'warfare', 'conflict', 'invasion', 'attack', 'bombing', 'missile',
+                'sanctions', 'military', 'troops', 'forces', 'violence', 'terrorism',
+                'ceasefire', 'peace talks', 'diplomatic crisis', 'nuclear', 'weapons'
+            ];
+            
+            // Medium priority keywords
+            const mediumPriorityKeywords = [
+                'tension', 'crisis', 'protest', 'election', 'coup', 'government',
+                'security', 'threat', 'intelligence', 'cyber attack', 'embargo'
+            ];
+            
+            // Exclude sports, entertainment, etc.
+            const excludeKeywords = [
+                'sport', 'football', 'basketball', 'movie', 'celebrity', 'music',
+                'weather', 'stock market', 'earnings', 'technology review'
+            ];
+            
+            const hasExcluded = excludeKeywords.some(keyword => text.includes(keyword));
+            if (hasExcluded) return false;
+            
+            const hasHighPriority = highPriorityKeywords.some(keyword => text.includes(keyword));
+            const hasMediumPriority = mediumPriorityKeywords.some(keyword => text.includes(keyword));
+            
+            return hasHighPriority || hasMediumPriority;
         });
 
+        console.log(`Filtered ${relevantArticles.length} relevant articles from ${data.articles.length} total`);
         return relevantArticles.length > 0 ? relevantArticles : null;
     } catch (error) {
         console.error('Error fetching news:', error.message);
@@ -422,6 +449,42 @@ app.get('/api/global-analysis', async (req, res) => {
     }
 });
 
+app.get('/api/historical-analysis', async (req, res) => {
+    try {
+        const period = req.query.period || '24h';
+        let timeFilter;
+        
+        switch(period) {
+            case '24h':
+                timeFilter = new Date(Date.now() - 24 * 60 * 60 * 1000);
+                break;
+            case '7d':
+                timeFilter = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+                break;
+            case '30d':
+                timeFilter = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+                break;
+            case '1y':
+                timeFilter = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
+                break;
+            default:
+                timeFilter = new Date(Date.now() - 24 * 60 * 60 * 1000);
+        }
+
+        const { data, error } = await supabase
+            .from('global_analysis')
+            .select('overall_risk_level, created_at')
+            .gte('created_at', timeFilter.toISOString())
+            .order('created_at', { ascending: true });
+
+        if (error) throw error;
+        res.json(data || []);
+    } catch (error) {
+        console.error('Error fetching historical analysis:', error.message);
+        res.status(500).json({ error: 'Failed to fetch historical analysis' });
+    }
+});
+
 app.post('/api/trigger-analysis', async (req, res) => {
     try {
         console.log('Manual analysis trigger requested...');
@@ -444,6 +507,13 @@ io.on('connection', (socket) => {
 
 async function performGlobalAnalysis() {
     try {
+        // Enforce minimum interval between AI calls
+        if (lastAIUpdate && (Date.now() - lastAIUpdate) < MIN_AI_INTERVAL) {
+            const remainingTime = Math.ceil((MIN_AI_INTERVAL - (Date.now() - lastAIUpdate)) / 60000);
+            console.log(`AI analysis skipped - ${remainingTime} minutes remaining until next allowed call`);
+            return;
+        }
+
         console.log('Starting global conflict analysis...');
         const newsArticles = await getNews();
         
