@@ -173,22 +173,22 @@ const MIN_AI_INTERVAL = 30 * 60 * 1000; // 30 minutes minimum between AI calls
 async function getNews() {
     try {
         if (!process.env.NEWS_API_KEY) {
-            console.log('No News API key found, using fallback analysis');
-            return getFallbackNews();
+            console.log('No News API key found');
+            return null;
         }
 
         const response = await fetch(`https://newsapi.org/v2/top-headlines?category=general&pageSize=50&apiKey=${process.env.NEWS_API_KEY}`);
         
         if (!response.ok) {
-            console.log('News API request failed, using fallback');
-            return getFallbackNews();
+            console.log('News API request failed');
+            return null;
         }
         
         const data = await response.json();
         
         if (!data.articles || data.articles.length === 0) {
-            console.log('No articles found, using fallback');
-            return getFallbackNews();
+            console.log('No articles found');
+            return null;
         }
         
         const relevantArticles = data.articles.filter(article => {
@@ -197,36 +197,11 @@ async function getNews() {
             return conflictKeywords.some(keyword => text.includes(keyword));
         });
 
-        return relevantArticles.length > 0 ? relevantArticles : getFallbackNews();
+        return relevantArticles.length > 0 ? relevantArticles : null;
     } catch (error) {
         console.error('Error fetching news:', error.message);
-        return getFallbackNews();
+        return null;
     }
-}
-
-function getFallbackNews() {
-    return [
-        {
-            title: "Global Political Tensions Rise",
-            description: "Current geopolitical tensions between major powers continue to escalate with ongoing conflicts in Ukraine, Middle East tensions, and trade disputes affecting global stability."
-        },
-        {
-            title: "Middle East Conflict Updates", 
-            description: "Ongoing conflicts in the Middle East region continue to affect regional stability, with particular focus on Syria, Iraq, and tensions between Israel and Palestinian territories."
-        },
-        {
-            title: "Eastern Europe Security Concerns",
-            description: "The situation in Ukraine remains a major concern for global security, with implications for NATO countries and regional stability in Eastern Europe."
-        },
-        {
-            title: "Asia-Pacific Regional Tensions",
-            description: "Tensions in the South China Sea and Korean Peninsula continue to be monitoring points for regional security and international relations."
-        },
-        {
-            title: "African Regional Conflicts",
-            description: "Various conflicts across Africa including situations in Ethiopia, Nigeria, and other regions continue to affect regional stability and humanitarian conditions."
-        }
-    ];
 }
 
 async function initializeDB() {
@@ -244,45 +219,56 @@ async function initializeDB() {
 
 async function analyzeGlobalConflicts(newsArticles) {
     try {
-        const prompt = `Analyze the following recent news articles and provide a comprehensive global conflict risk assessment. Focus on identifying specific countries mentioned and their current conflict situations.
+        const currentDate = new Date().toISOString().split('T')[0];
+        const currentTime = new Date().toLocaleString();
+        
+        const prompt = `Today is ${currentDate} at ${currentTime}. You are analyzing breaking news to assess global conflict risks. Base your analysis STRICTLY on the provided news articles and current global context.
 
-Recent news data:
-${newsArticles.map(article => `Title: ${article.title}\nContent: ${article.description || article.content || 'No content available'}\n---`).join('\n')}
+Recent breaking news:
+${newsArticles.map(article => `Title: ${article.title}\nDescription: ${article.description || 'No description'}\nPublished: ${article.publishedAt || 'Recent'}\n---`).join('\n')}
 
-IMPORTANT: Return ONLY valid JSON with no additional text, explanations, or formatting. Provide a JSON response with the following structure:
+CRITICAL INSTRUCTIONS:
+- Analyze ONLY based on the news provided above and current global events as of ${currentDate}
+- Risk levels should reflect the actual intensity and immediacy of threats mentioned in these articles
+- Countries with active conflicts or breaking tensions should have higher risk levels (70-90)
+- Countries with diplomatic tensions or economic issues should have moderate levels (40-70)  
+- Stable countries with no major issues should have lower levels (10-40)
+- The overall risk should reflect the aggregate of all current threats, not historical averages
+- Be responsive to breaking news - if major events are happening, reflect higher risk levels
+- Trend direction should reflect whether recent events are escalating or de-escalating
+
+Return ONLY valid JSON:
 {
-  "overall_risk_level": number (0-100, current global threat level),
+  "overall_risk_level": number (0-100, based on current threat intensity from news),
   "countries": [
     {
       "name": "exact country name", 
       "iso_code": "3-letter ISO code",
-      "risk_level": number (0-100),
+      "risk_level": number (0-100, based on current situation),
       "conflicts": [
         {
-          "title": "brief conflict title",
-          "description": "1-2 sentence description", 
-          "severity": number (1-10),
+          "title": "specific current conflict/issue",
+          "description": "current situation based on news", 
+          "severity": number (1-10, current intensity),
           "type": "war|political_unrest|economic|natural_disaster|terrorist|cyber|diplomatic",
-          "risk_score": number (0-100)
+          "risk_score": number (0-100, immediate threat level)
         }
       ]
     }
   ],
-  "key_events": ["key event 1", "key event 2", "key event 3"],
+  "key_events": ["current major event 1", "current major event 2", "current major event 3"],
   "trend_direction": "increasing|decreasing|stable", 
-  "news_summary": "2-3 sentence summary of global situation",
-  "ai_reasoning": "explanation of risk assessment methodology"
+  "news_summary": "2-3 sentence summary of current global threats from these articles",
+  "ai_reasoning": "explanation of current risk assessment based on breaking news"
 }
 
-Focus on these priority countries if mentioned: United States, China, Russia, India, United Kingdom, France, Germany, Japan, Brazil, Canada, Australia, South Korea, Italy, Spain, Mexico, Turkey, Iran, Saudi Arabia, Israel, Pakistan, Afghanistan, Ukraine, Iraq, Syria, North Korea, Venezuela, Nigeria, South Africa, Egypt, Ethiopia.
-
-For countries not explicitly mentioned but known to have ongoing issues, include them with appropriate risk levels based on current global knowledge. Ensure at least 15-20 countries are analyzed to provide comprehensive global coverage.`;
+Focus on countries mentioned in the news articles. For major powers (US, China, Russia, etc.) always include current assessment even if not directly mentioned. Ensure risk levels reflect current reality - if there are active wars, those countries should have very high risk levels (80-95). If tensions are escalating, show increasing trend.`;
 
         const completion = await openai.chat.completions.create({
             model: "openai/gpt-4o",
             response_format: { type: "json_object" },
             messages: [{ role: "user", content: prompt }],
-            temperature: 0.3,
+            temperature: 0.7,
             max_tokens: 4000
         });
 
@@ -461,11 +447,12 @@ async function performGlobalAnalysis() {
         console.log('Starting global conflict analysis...');
         const newsArticles = await getNews();
         
-        if (!newsArticles) {
-            console.log('No new news to analyze');
+        if (!newsArticles || newsArticles.length === 0) {
+            console.log('No current news available for analysis - skipping this cycle');
             return;
         }
 
+        console.log(`Analyzing ${newsArticles.length} relevant news articles...`);
         const analysis = await analyzeGlobalConflicts(newsArticles);
         if (!analysis) {
             console.log('AI analysis failed');
@@ -482,7 +469,7 @@ async function performGlobalAnalysis() {
             timestamp: new Date().toISOString()
         });
 
-        console.log('Global analysis completed successfully');
+        console.log(`Global analysis completed - Risk Level: ${analysis.overall_risk_level}%`);
     } catch (error) {
         console.error('Error in global analysis:', error.message);
     }

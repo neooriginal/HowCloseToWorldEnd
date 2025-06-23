@@ -671,166 +671,54 @@ class GlobalThreatTracker {
     async updateChart() {
         if (!this.threatChart) return;
 
-        // Generate sample historical data based on period
-        const data = this.generateHistoricalData(this.currentChartPeriod);
-        
-        this.threatChart.data.labels = data.labels;
-        this.threatChart.data.datasets[0].data = data.values;
-        this.threatChart.update();
+        // Load real historical data from API instead of generating fake data
+        try {
+            const response = await fetch('/api/global-analysis');
+            const analysis = await response.json();
+            
+            if (analysis) {
+                // For now, just show current data point until we have real historical data
+                const data = {
+                    labels: ['Current'],
+                    values: [analysis.overall_risk_level || 0]
+                };
+                
+                this.threatChart.data.labels = data.labels;
+                this.threatChart.data.datasets[0].data = data.values;
+                this.threatChart.update();
+            }
+        } catch (error) {
+            console.error('Error loading chart data:', error);
+        }
     }
 
     generateHistoricalData(period) {
-        const now = new Date();
-        const data = { labels: [], values: [] };
-        let points, timeStep, format;
-
-        switch(period) {
-            case '24h':
-                points = 24;
-                timeStep = 60 * 60 * 1000; // 1 hour
-                format = (date) => date.toLocaleTimeString('en-US', {hour: '2-digit', minute: '2-digit'});
-                break;
-            case '7d':
-                points = 7;
-                timeStep = 24 * 60 * 60 * 1000; // 1 day
-                format = (date) => date.toLocaleDateString('en-US', {month: 'short', day: 'numeric'});
-                break;
-            case '30d':
-                points = 30;
-                timeStep = 24 * 60 * 60 * 1000; // 1 day
-                format = (date) => date.toLocaleDateString('en-US', {month: 'short', day: 'numeric'});
-                break;
-            case '1y':
-                points = 12;
-                timeStep = 30 * 24 * 60 * 60 * 1000; // ~1 month
-                format = (date) => date.toLocaleDateString('en-US', {month: 'short', year: '2-digit'});
-                break;
-        }
-
-        // Generate sample data with some realistic fluctuation
-        let baseLevel = this.globalAnalysis?.overall_risk_level || 45;
-        for (let i = points - 1; i >= 0; i--) {
-            const date = new Date(now.getTime() - (i * timeStep));
-            data.labels.push(format(date));
-            
-            // Add some realistic variation
-            const variation = (Math.random() - 0.5) * 15;
-            let value = Math.max(0, Math.min(100, baseLevel + variation));
-            
-            // Add some trending
-            if (period === '1y') {
-                value += (i - points/2) * 0.5; // Slight upward trend
-            }
-            
-            data.values.push(Math.round(value));
-            baseLevel = value * 0.8 + baseLevel * 0.2; // Smooth transitions
-        }
-
-        return data;
+        // Removed - no fake historical data
+        return { labels: [], values: [] };
     }
 
     async loadNews() {
-        try {
-            // Simulate different news categories
-            const newsCategories = [
-                { id: 'breakingNews', keywords: ['conflict', 'crisis', 'war', 'attack'] },
-                { id: 'geopoliticalNews', keywords: ['politics', 'diplomacy', 'sanctions', 'election'] },
-                { id: 'securityNews', keywords: ['security', 'terrorism', 'cyber', 'military'] }
-            ];
-
-            for (const category of newsCategories) {
-                await this.loadNewsForCategory(category);
-            }
-        } catch (error) {
-            console.error('Error loading news:', error);
-            this.showNewsError();
-        }
+        // News loading removed - all news should come from backend analysis
+        // Frontend will only display conflicts from the API
+        console.log('News display handled through conflicts API');
     }
 
     async loadNewsForCategory(category) {
-        try {
-            // For demo purposes, generate sample news
-            const sampleNews = this.generateSampleNews(category.keywords);
-            
-            const container = document.getElementById(category.id);
-            if (container) {
-                container.innerHTML = sampleNews.map(article => `
-                    <a href="${article.url}" target="_blank" rel="noopener noreferrer" class="news-link">
-                        <div class="news-item">
-                            <div class="news-title">${article.title}</div>
-                            <div class="news-summary">${article.summary}</div>
-                            <div class="news-meta">
-                                <span class="news-source">${article.source}</span>
-                                <span class="news-time">${article.time}</span>
-                            </div>
-                        </div>
-                    </a>
-                `).join('');
-            }
-        } catch (error) {
-            console.error(`Error loading news for ${category.id}:`, error);
-        }
+        // Removed - using real data only
     }
 
     generateSampleNews(keywords) {
-        const sources = ['Reuters', 'AP News', 'BBC', 'CNN', 'WSJ', 'Guardian', 'Al Jazeera'];
-        const articles = [];
-        
-        const sampleTitles = {
-            conflict: [
-                'Regional tensions escalate in Eastern Europe',
-                'Diplomatic efforts continue amid ongoing crisis',
-                'International community calls for immediate ceasefire'
-            ],
-            politics: [
-                'Major policy shifts expected following summit',
-                'Coalition government faces new challenges',
-                'Trade negotiations reach critical juncture'
-            ],
-            security: [
-                'Enhanced security measures implemented globally',
-                'Cybersecurity threats on the rise',
-                'Defense ministers meet to discuss regional stability'
-            ]
-        };
-
-        for (let i = 0; i < 5; i++) {
-            const keyword = keywords[Math.floor(Math.random() * keywords.length)];
-            const titleOptions = sampleTitles[keyword] || sampleTitles.conflict;
-            const title = titleOptions[Math.floor(Math.random() * titleOptions.length)];
-            
-            articles.push({
-                title: title,
-                summary: `Latest developments in ${keyword} situation affecting global stability and security. Intelligence reports indicate continued monitoring required.`,
-                source: sources[Math.floor(Math.random() * sources.length)],
-                time: this.getRandomTime(),
-                url: '#' // Placeholder URL
-            });
-        }
-
-        return articles;
+        // Removed - no hardcoded news
+        return [];
     }
 
     getRandomTime() {
-        const now = new Date();
-        const hoursAgo = Math.floor(Math.random() * 24);
-        const minutesAgo = Math.floor(Math.random() * 60);
-        
-        if (hoursAgo === 0) {
-            return `${minutesAgo}m ago`;
-        } else {
-            return `${hoursAgo}h ago`;
-        }
+        // Removed - no sample news
+        return '';
     }
 
     showNewsError() {
-        const categories = ['breakingNews', 'geopoliticalNews', 'securityNews'];
-        categories.forEach(categoryId => {
-            const container = document.getElementById(categoryId);
-            if (container) {
-                container.innerHTML = '<div class="news-loading">Unable to load intelligence reports. Retrying...</div>';
-            }
-        });
+        // Removed - better to show nothing than fake news
     }
 }
 
