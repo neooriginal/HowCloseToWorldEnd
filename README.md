@@ -1,201 +1,194 @@
-# 🌍💀 HOW CLOSE TO WORLD END
+# How Close To World End
+
+A real-time global conflict tracker powered by AI analysis, news monitoring, and risk assessment.
+
+## Features
+
+- **Real-time Conflict Monitoring**: Live tracking of global conflicts and tensions
+- **AI-Powered Analysis**: OpenAI-driven risk assessment and trend analysis  
+- **Interactive World Map**: Visual representation of global risk levels
+- **RESTful API**: Complete API for accessing conflict data
+- **Real-time Updates**: WebSocket-based live updates
+- **Historical Trends**: Track risk levels over time
+
+## Technology Stack
+
+- **Backend**: Node.js, Express.js
+- **Database**: Appwrite (NoSQL/Document-based)
+- **AI**: OpenAI GPT-4 for analysis
+- **Frontend**: Vanilla JavaScript, D3.js for visualizations
+- **Real-time**: Socket.io
+- **News**: NewsAPI integration
+- **Deployment**: Docker
+
+## Quick Start
+
+### 1. Setup Appwrite Database
+
+#### Create Appwrite Project
+1. Go to [Appwrite Console](https://cloud.appwrite.io) (or use your self-hosted instance)
+2. Create a new account or log in
+3. Click "Create Project"
+4. Enter a project name (e.g., "World Conflict Tracker")
+5. Copy your **Project ID**
+
+#### Generate API Key
+1. In your project dashboard, go to **Settings > API Keys**
+2. Click "Create API Key"
+3. Name it "Server Key" 
+4. Grant these permissions:
+   - `databases.read` & `databases.write`
+   - `collections.read` & `collections.write`
+   - `attributes.read` & `attributes.write`
+   - `documents.read` & `documents.write`
+   - `indexes.read` & `indexes.write`
+5. Copy your **API Key** (keep secure!)
 
-> *"We are like children playing with fire, and we don't even know that fire is hot."* - Carl Sagan
+### 2. Install Dependencies
 
-**The most important question of our time: How close are we to global catastrophe?**
+```bash
+npm install
+```
 
-In an era where nuclear tensions rise, climate disasters intensify, and geopolitical conflicts spiral out of control, **How Close To World End** provides the sobering answer through cutting-edge AI analysis of global intelligence.
+### 3. Configure Environment
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env` with your credentials:
+```env
+# Appwrite Configuration
+APPWRITE_ENDPOINT=https://cloud.appwrite.io/v1
+APPWRITE_PROJECT_ID=your_project_id_here
+APPWRITE_API_KEY=your_api_key_here
 
-<img width="1372" alt="screenshot" src="https://github.com/user-attachments/assets/56cc0619-d23b-4e8f-8057-763d673e0085" />
+# API Keys
+OPENROUTER_API_KEY=your_openrouter_key
+NEWS_API_KEY=your_news_api_key
+```
+
+### 4. Start the Application
 
----
+```bash
+npm start
+```
 
-## 🔥 **Why This Matters**
+The application will automatically:
+- Initialize the Appwrite database
+- Create collections and indexes  
+- Seed initial country data
+- Start the server on port 3000
 
-> *"The unleashed power of the atom has changed everything save our modes of thinking, and thus we drift toward unparalleled catastrophe."* - Albert Einstein
+Look for these success messages:
+```
+✅ Connection successful!
+✓ Database created
+✓ Countries collection created
+✓ Conflicts collection created
+✓ Global Analysis collection created
+✓ Regional Summaries collection created
+✓ Initial data seeded successfully
+```
 
-Every day, our world teeters on the edge of chaos. **How Close To World End** cuts through the noise of traditional media to deliver:
+## API Documentation
 
-- **🧠 AI-Powered Global Threat Assessment** - Advanced algorithms analyze thousands of news sources to calculate humanity's proximity to catastrophic events
-- **⏰ Real-Time Countdown** - Live updates every 6 hours as global events unfold
-- **🗺️ Interactive Threat Map** - Visualize danger zones across the globe with stunning, dramatic graphics
-- **📈 Historical Crisis Tracking** - Watch how close we've come before, and see the trends that could seal our fate
-- **🔮 Predictive Intelligence** - AI reasoning that explains exactly why the threat level is rising or falling
+API documentation is available at `/docs` when the server is running.
 
----
+### Main Endpoints
 
-## 🚨 **Critical Features**
+- `GET /api/countries` - List all countries with risk levels
+- `GET /api/conflicts` - List active conflicts
+- `GET /api/global-analysis` - Get latest global analysis
+- `GET /api/historical-analysis` - Get historical risk data
 
-### **The Doomsday Clock 2.0**
-> *"We are now as close to Doomsday as we have ever been."* - Bulletin of Atomic Scientists
+## Configuration
 
-- **Live Threat Percentage** with pulsing red alerts when danger peaks
-- **6-Hour Analysis Cycles** monitoring global events 24/7
-- **AI Reasoning Display** - Click the info button to see why the world is ending (or not)
-- **Next Scan Countdown** - Know exactly when the next threat assessment drops
+### Required Environment Variables
 
-### **Global Intelligence Network**
-- **Breaking Intelligence** - Critical developments affecting human survival
-- **Geopolitical Updates** - Power shifts that could trigger global conflict  
-- **Security Briefings** - Military and cyber threats monitoring
-- **Real-time country threat levels** with color-coded warnings
+```env
+# Appwrite Configuration
+APPWRITE_ENDPOINT=https://cloud.appwrite.io/v1
+APPWRITE_PROJECT_ID=your_project_id
+APPWRITE_API_KEY=your_api_key
 
-### **Historical Analysis**
-- **Interactive charts** showing humanity's closest calls
-- **Multiple timeframes** from 24 hours to yearly trends
-- **Pattern recognition** to identify escalating crisis periods
+# API Keys
+OPENROUTER_API_KEY=your_openrouter_key
+NEWS_API_KEY=your_news_api_key
+```
 
----
+### Optional Configuration
 
-## 🔧 **Deploy Your Own Doomsday Monitor**
+```env
+NODE_ENV=development
+PORT=3000
+```
 
-> *"Knowledge is power, but knowledge of the end is the ultimate power."*
+## Deployment
 
-Want to run your own private threat assessment? Here's how to set up your personal early warning system:
+### Docker Deployment
 
-### **Prerequisites for Survival**
-- Docker & Docker Compose (for containerized deployment) **OR** Node.js v18+ (for local development)
-- Supabase account (cloud database for when local infrastructure fails)
-- NewsAPI key (your pipeline to global intelligence)
-- OpenRouter API key (for GPT-4 powered threat analysis)
+```bash
+docker-compose up -d
+```
 
-### **🐳 Docker Deployment (Recommended)**
+Make sure to set your environment variables in the docker-compose.yml file.
 
-> *"In the final moments, only the prepared survive."*
+### Manual Deployment
 
-**One-Command Deployment - No Building Required!**
+1. Set up your Appwrite project and get credentials
+2. Configure environment variables on your server
+3. Install dependencies: `npm install`
+4. Start the application: `npm start`
 
-Uses pre-built images from GitHub Container Registry for instant deployment.
+## Development
 
-1. **Download the Configuration**
-   ```bash
-   curl -o docker-compose.yml https://raw.githubusercontent.com/neooriginal/HowCloseToWorldEnd/main/docker-compose.yml
-   ```
+### Project Structure
 
-2. **Set Your Environment Variables**
-   Create a `.env` file in the same directory:
-   ```env
-   # Your Database of Doom
-   SUPABASE_URL=https://your-project-id.supabase.co
-   SUPABASE_ANON_KEY=your_supabase_anon_key
+```
+├── appwrite-setup.js     # Database initialization
+├── index.js              # Main application server
+├── public/               # Frontend files
+│   ├── app.js           # Frontend JavaScript
+│   ├── styles.css       # Styling
+│   └── index.html       # Main page
+└── package.json          # Dependencies
+```
 
-   # Intelligence Gathering APIs
-   NEWS_API_KEY=your_newsapi_key
-   OPENROUTER_API_KEY=your_openrouter_key
-   ```
+### Adding New Features
 
-3. **Initialize Your Database** 
-   - Create a [Supabase](https://supabase.com) project
-   - Download and run the [`init.sql`](https://github.com/neooriginal/HowCloseToWorldEnd/blob/main/init.sql) script in your SQL Editor
+1. Database changes: Update `appwrite-setup.js`
+2. API endpoints: Add to `index.js`
+3. Frontend: Update files in `public/`
 
-4. **Deploy in Seconds**
-   ```bash
-   docker-compose up -d
-   ```
+## Contributing
 
-That's it! Your doomsday dashboard is live at `http://localhost:3000`
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
 
-### **🛠️ Local Development Installation**
+## License
 
-> *"Sometimes you need to see the code to believe the end is near."*
+This project is licensed under the ISC License.
 
-1. **Clone the Repository of Truth**
-   ```bash
-   git clone https://github.com/neooriginal/HowCloseToWorldEnd.git
-   cd HowCloseToWorldEnd
-   ```
+## Support
 
-2. **Install Dependencies** 
-   ```bash
-   npm install
-   ```
+For setup issues, check:
+1. [Appwrite Documentation](https://appwrite.io/docs)
+2. [Appwrite Community Discord](https://discord.gg/GSeTUeA)
+3. Project issues on GitHub
 
-3. **Initialize the Database** 
-   - Create a [Supabase](https://supabase.com) project
-   - Run the `init.sql` script in your SQL Editor
-   - This creates the tables that will track humanity's demise
+### Troubleshooting
 
-4. **Configure Your Intelligence Network**
-   Create `.env` with your secret credentials:
-   ```env
-   # Your Database of Doom
-   SUPABASE_URL=https://your-project-id.supabase.co
-   SUPABASE_ANON_KEY=your_supabase_anon_key
+**Database Connection Issues:**
+- Verify Project ID and API Key are correct
+- Check API key permissions include all database scopes
+- Ensure endpoint URL is correct
 
-   # Intelligence Gathering APIs
-   NEWS_API_KEY=your_newsapi_key
-   OPENROUTER_API_KEY=your_openrouter_key
-   ```
-
-5. **Launch the Warning System**
-   ```bash
-   npm start
-   ```
-
-Your personal doomsday dashboard will be live at `http://localhost:3000`
-
-## 📡 **API: For Those Who Code at the Edge of Tomorrow**
-
-> *"In the face of extinction, data becomes the most precious resource."*
-
-Access the threat data programmatically:
-
-- **GET `/api/countries`** - Current threat levels by nation
-- **GET `/api/conflicts`** - Active global conflicts and crises  
-- **GET `/api/global-analysis`** - Latest AI assessment of world end probability
-- **GET `/docs`** - Complete API documentation
-
-**Rate Limited**: 100 requests per 15 minutes (because even in the apocalypse, we need order)
-
----
-
-## ⚠️ **Reality Check**
-
-> *"The real question is not whether machines think but whether men do."* - B.F. Skinner
-
-**How Close To World End** is an educational project that uses AI to analyze current events and generate speculative assessments. This is:
-
-- ✅ **A powerful tool** for understanding global risk patterns
-- ✅ **Educational content** about geopolitical threats
-- ✅ **A technological demonstration** of AI-powered analysis
-- ❌ **NOT a definitive prediction** of actual world-ending events
-- ❌ **NOT investment advice** (though maybe invest in bunkers?)
-- ❌ **NOT a reason to panic** (but maybe a reason to pay attention)
-
----
-
-## 🤝 **Join the Mission**
-
-> *"The greatest threat to our planet is the belief that someone else will save it."* - Robert Swan
-
-Want to help humanity stay informed about its potential demise?
-
-- 🐛 **Report bugs** when you find them (we need this working when it matters)
-- 💡 **Suggest improvements** to our threat detection algorithms
-- 🔧 **Submit pull requests** to make the system more accurate
-- 📢 **Share responsibly** - inform, don't panic
-
----
-
-## 📜 **Legal Disclaimer**
-
-This project is licensed for personal use and self-hosting. Commercial use requires permission. See [LICENSE](LICENSE) for full terms.
-
-**Remember**: This is a speculative analysis tool. Real global threats require serious attention from real experts, not just AI and dramatic dashboards.
-
----
-
-## 🌟 **Credits**
-
-*Built with a mixture of caffeine, existential dread, and genuine concern for humanity's future.*
-
-**Made with 💀 by Neo**
-
-> *"We are the first generation to face the end of the world, and the last generation that can do something about it."*
-
----
-
-[🐛 Report Issues](https://github.com/neooriginal/HowCloseToWorldEnd/issues)
-
-*Stay informed. Stay alive. The world is counting on it.*
+**Collection Creation Errors:**
+- Wait a few minutes between attempts - Appwrite needs time to process
+- Check that attributes are created before adding indexes
+- Verify your API key has `collections.write` permission
  

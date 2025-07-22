@@ -1,6 +1,5 @@
 const openai_lib = require('openai');
 const axios = require('axios');
-const { createClient } = require('@supabase/supabase-js');
 const express = require('express');
 const dotenv = require('dotenv');
 const http = require('http');
@@ -8,6 +7,8 @@ const socketIo = require('socket.io');
 const path = require('path');
 const rateLimit = require('express-rate-limit');
 const swaggerUi = require('swagger-ui-express');
+const { Query, ID } = require('node-appwrite');
+const { databases, DATABASE_ID, COLLECTIONS, initializeAppwriteDatabase, seedInitialData } = require('./appwrite-setup');
 
 dotenv.config();
 
@@ -158,12 +159,6 @@ const openai = new openai_lib({
     baseURL: 'https://openrouter.ai/api/v1',
 });
 
-// Initialize Supabase client
-const supabase = createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_ANON_KEY
-);
-
 // Track last successful AI update
 let lastAIUpdate = null;
 const MIN_AI_INTERVAL = 30 * 60 * 1000; // 30 minutes minimum between AI calls
@@ -233,14 +228,11 @@ async function getNews() {
 
 async function initializeDB() {
     try {
-        // Test Supabase connection
-        const { data, error } = await supabase.from('countries').select('id').limit(1);
-        if (error && error.code !== 'PGRST116') { // PGRST116 is "table not found" which is ok during first setup
-            throw error;
-        }
-        console.log('Database connection successful');
+        await initializeAppwriteDatabase();
+        await seedInitialData();
+        console.log('Appwrite database connection successful');
     } catch (error) {
-        console.error('Failed to initialize database:', error.message);
+        console.error('Failed to initialize Appwrite database:', error.message);
     }
 }
 
@@ -318,9 +310,11 @@ Focus on countries mentioned in the news articles. For major powers (US, China, 
 
 async function saveGlobalAnalysis(analysis) {
     try {
-        const { data, error } = await supabase
-            .from('global_analysis')
-            .insert({
+        const data = await databases.createDocument(
+            DATABASE_ID,
+            COLLECTIONS.GLOBAL_ANALYSIS,
+            ID.unique(),
+            {
                 overall_risk_level: analysis.overall_risk_level,
                 active_conflicts_count: analysis.countries.reduce((total, country) => total + country.conflicts.length, 0),
                 high_risk_countries_count: analysis.countries.filter(c => c.risk_level > 60).length,
@@ -328,11 +322,9 @@ async function saveGlobalAnalysis(analysis) {
                 ai_reasoning: analysis.ai_reasoning,
                 key_events: analysis.key_events,
                 trend_direction: analysis.trend_direction
-            })
-            .select()
-            .single();
+            }
+        );
 
-        if (error) throw error;
         return data;
     } catch (error) {
         console.error('Error saving global analysis:', error.message);
@@ -343,42 +335,74 @@ async function saveGlobalAnalysis(analysis) {
 async function updateCountriesAndConflicts(analysis) {
     try {
         for (const countryData of analysis.countries) {
-            await supabase
-                .from('countries')
-                .upsert({
+            // Find existing country by iso_code
+            const existingCountries = await databases.listDocuments(
+                DATABASE_ID,
+                COLLECTIONS.COUNTRIES,
+                [Query.equal('iso_code', countryData.iso_code)]
+            );
+
+            let countryId;
+            if (existingCountries.total > 0) {
+                // Update existing country
+                const country = existingCountries.documents[0];
+                countryId = country.$id;
+                await databases.updateDocument(
+                    DATABASE_ID,
+                    COLLECTIONS.COUNTRIES,
+                    countryId,
+                    {
+                        current_risk_level: countryData.risk_level,
+                        last_updated: new Date().toISOString()
+                    }
+                );
+            } else {
+                // Create new country
+                const newCountry = await databases.createDocument(
+                    DATABASE_ID,
+                    COLLECTIONS.COUNTRIES,
+                    ID.unique(),
+                    {
                     name: countryData.name,
                     iso_code: countryData.iso_code,
                     current_risk_level: countryData.risk_level,
                     last_updated: new Date().toISOString()
-                }, {
-                    onConflict: 'iso_code'
-                });
+                    }
+                );
+                countryId = newCountry.$id;
+            }
 
-            const { data: country } = await supabase
-                .from('countries')
-                .select('id')
-                .eq('iso_code', countryData.iso_code)
-                .single();
+            if (countryData.conflicts) {
+                // Delete existing active conflicts for this country
+                const existingConflicts = await databases.listDocuments(
+                    DATABASE_ID,
+                    COLLECTIONS.CONFLICTS,
+                    [
+                        Query.equal('country_id', countryId),
+                        Query.equal('status', 'active')
+                    ]
+                );
 
-            if (country && countryData.conflicts) {
-                await supabase
-                    .from('conflicts')
-                    .delete()
-                    .eq('country_id', country.id)
-                    .eq('status', 'active');
+                for (const conflict of existingConflicts.documents) {
+                    await databases.deleteDocument(DATABASE_ID, COLLECTIONS.CONFLICTS, conflict.$id);
+                }
 
+                // Add new conflicts
                 for (const conflict of countryData.conflicts) {
-                    await supabase
-                        .from('conflicts')
-                        .insert({
-                            country_id: country.id,
+                    await databases.createDocument(
+                        DATABASE_ID,
+                        COLLECTIONS.CONFLICTS,
+                        ID.unique(),
+                        {
+                            country_id: countryId,
                             title: conflict.title,
                             description: conflict.description,
                             severity: conflict.severity,
                             conflict_type: conflict.type,
                             risk_score: conflict.risk_score,
                             status: 'active'
-                        });
+                        }
+                    );
                 }
             }
         }
@@ -390,13 +414,13 @@ async function updateCountriesAndConflicts(analysis) {
 // API endpoints
 app.get('/api/countries', async (req, res) => {
     try {
-        const { data, error } = await supabase
-            .from('countries')
-            .select('*')
-            .order('current_risk_level', { ascending: false });
+        const result = await databases.listDocuments(
+            DATABASE_ID,
+            COLLECTIONS.COUNTRIES,
+            [Query.orderDesc('current_risk_level')]
+        );
 
-        if (error) throw error;
-        res.json(data);
+        res.json(result.documents);
     } catch (error) {
         console.error('Error fetching countries:', error.message);
         res.status(500).json({ error: 'Failed to fetch countries' });
@@ -405,25 +429,39 @@ app.get('/api/countries', async (req, res) => {
 
 app.get('/api/conflicts', async (req, res) => {
     try {
-        const { data, error } = await supabase
-            .from('conflicts')
-            .select(`
-                *,
-                countries (
-                    name,
-                    iso_code
-                )
-            `)
-            .eq('status', 'active')
-            .order('severity', { ascending: false });
+        const conflicts = await databases.listDocuments(
+            DATABASE_ID,
+            COLLECTIONS.CONFLICTS,
+            [
+                Query.equal('status', 'active'),
+                Query.orderDesc('severity')
+            ]
+        );
 
-        if (error) throw error;
-        
-        const formattedData = data.map(conflict => ({
+        // Get country details for each conflict
+        const formattedData = [];
+        for (const conflict of conflicts.documents) {
+            try {
+                const country = await databases.getDocument(
+                    DATABASE_ID,
+                    COLLECTIONS.COUNTRIES,
+                    conflict.country_id
+                );
+                
+                formattedData.push({
+                    ...conflict,
+                    country_name: country.name,
+                    iso_code: country.iso_code
+                });
+            } catch (countryError) {
+                // If country not found, include conflict without country details
+                formattedData.push({
             ...conflict,
-            country_name: conflict.countries.name,
-            iso_code: conflict.countries.iso_code
-        }));
+                    country_name: 'Unknown',
+                    iso_code: 'UNK'
+                });
+            }
+        }
         
         res.json(formattedData);
     } catch (error) {
@@ -434,15 +472,20 @@ app.get('/api/conflicts', async (req, res) => {
 
 app.get('/api/global-analysis', async (req, res) => {
     try {
-        const { data, error } = await supabase
-            .from('global_analysis')
-            .select('*')
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .single();
+        const result = await databases.listDocuments(
+            DATABASE_ID,
+            COLLECTIONS.GLOBAL_ANALYSIS,
+            [
+                Query.orderDesc('$createdAt'),
+                Query.limit(1)
+            ]
+        );
 
-        if (error) throw error;
-        res.json(data);
+        if (result.documents.length === 0) {
+            return res.status(404).json({ error: 'No global analysis found' });
+        }
+
+        res.json(result.documents[0]);
     } catch (error) {
         console.error('Error fetching global analysis:', error.message);
         res.status(500).json({ error: 'Failed to fetch global analysis' });
@@ -471,14 +514,22 @@ app.get('/api/historical-analysis', async (req, res) => {
                 timeFilter = new Date(Date.now() - 24 * 60 * 60 * 1000);
         }
 
-        const { data, error } = await supabase
-            .from('global_analysis')
-            .select('overall_risk_level, created_at')
-            .gte('created_at', timeFilter.toISOString())
-            .order('created_at', { ascending: true });
+        const result = await databases.listDocuments(
+            DATABASE_ID,
+            COLLECTIONS.GLOBAL_ANALYSIS,
+            [
+                Query.greaterThanEqual('$createdAt', timeFilter.toISOString()),
+                Query.orderAsc('$createdAt'),
+                Query.select(['overall_risk_level', '$createdAt'])
+            ]
+        );
 
-        if (error) throw error;
-        res.json(data || []);
+        const formattedData = result.documents.map(doc => ({
+            overall_risk_level: doc.overall_risk_level,
+            created_at: doc.$createdAt
+        }));
+
+        res.json(formattedData);
     } catch (error) {
         console.error('Error fetching historical analysis:', error.message);
         res.status(500).json({ error: 'Failed to fetch historical analysis' });
