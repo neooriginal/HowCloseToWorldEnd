@@ -130,6 +130,61 @@ const swaggerDocument = {
                     }
                 }
             }
+        },
+        '/news': {
+            get: {
+                summary: 'Get categorized news for intelligence sections',
+                responses: {
+                    '200': {
+                        description: 'Categorized news articles for intelligence display',
+                        content: {
+                            'application/json': {
+                                schema: {
+                                    type: 'object',
+                                    properties: {
+                                        breaking: { 
+                                            type: 'array', 
+                                            items: {
+                                                type: 'object',
+                                                properties: {
+                                                    title: { type: 'string' },
+                                                    description: { type: 'string' },
+                                                    source: { type: 'object' },
+                                                    publishedAt: { type: 'string' }
+                                                }
+                                            }
+                                        },
+                                        geopolitical: { 
+                                            type: 'array', 
+                                            items: {
+                                                type: 'object',
+                                                properties: {
+                                                    title: { type: 'string' },
+                                                    description: { type: 'string' },
+                                                    source: { type: 'object' },
+                                                    publishedAt: { type: 'string' }
+                                                }
+                                            }
+                                        },
+                                        security: { 
+                                            type: 'array', 
+                                            items: {
+                                                type: 'object',
+                                                properties: {
+                                                    title: { type: 'string' },
+                                                    description: { type: 'string' },
+                                                    source: { type: 'object' },
+                                                    publishedAt: { type: 'string' }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 };
@@ -544,6 +599,70 @@ app.post('/api/trigger-analysis', async (req, res) => {
     } catch (error) {
         console.error('Error triggering analysis:', error.message);
         res.status(500).json({ error: 'Failed to trigger analysis' });
+    }
+});
+
+// Add news endpoint for frontend
+app.get('/api/news', async (req, res) => {
+    try {
+        const news = await getNews();
+        
+        if (!news || news.length === 0) {
+            return res.json({
+                breaking: [],
+                geopolitical: [],
+                security: []
+            });
+        }
+
+        // Categorize news into different types
+        const breaking = [];
+        const geopolitical = [];
+        const security = [];
+
+        news.forEach(article => {
+            const text = (article.title + ' ' + (article.description || '')).toLowerCase();
+            
+            // Breaking news keywords (urgent/immediate events)
+            const breakingKeywords = ['breaking', 'urgent', 'attack', 'bombing', 'invasion', 'nuclear', 'emergency'];
+            
+            // Geopolitical keywords
+            const geopoliticalKeywords = ['diplomatic', 'sanctions', 'trade', 'relations', 'treaty', 'summit', 'election', 'government'];
+            
+            // Security keywords
+            const securityKeywords = ['security', 'terrorism', 'cyber', 'intelligence', 'threat', 'military', 'defense'];
+            
+            const hasBreaking = breakingKeywords.some(keyword => text.includes(keyword));
+            const hasGeopolitical = geopoliticalKeywords.some(keyword => text.includes(keyword));
+            const hasSecurity = securityKeywords.some(keyword => text.includes(keyword));
+            
+            // Assign to category based on priority
+            if (hasBreaking && breaking.length < 5) {
+                breaking.push(article);
+            } else if (hasGeopolitical && geopolitical.length < 5) {
+                geopolitical.push(article);
+            } else if (hasSecurity && security.length < 5) {
+                security.push(article);
+            } else {
+                // Distribute remaining articles evenly
+                if (breaking.length <= geopolitical.length && breaking.length <= security.length && breaking.length < 5) {
+                    breaking.push(article);
+                } else if (geopolitical.length <= security.length && geopolitical.length < 5) {
+                    geopolitical.push(article);
+                } else if (security.length < 5) {
+                    security.push(article);
+                }
+            }
+        });
+
+        res.json({
+            breaking: breaking.slice(0, 5),
+            geopolitical: geopolitical.slice(0, 5),
+            security: security.slice(0, 5)
+        });
+    } catch (error) {
+        console.error('Error fetching news for frontend:', error.message);
+        res.status(500).json({ error: 'Failed to fetch news' });
     }
 });
 

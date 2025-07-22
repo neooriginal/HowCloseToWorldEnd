@@ -723,27 +723,66 @@ class GlobalThreatTracker {
     }
 
     async loadNews() {
-        // News loading removed - all news should come from backend analysis
-        // Frontend will only display conflicts from the API
-        console.log('News display handled through conflicts API');
+        try {
+            const response = await fetch('/api/news');
+            const newsData = await response.json();
+            
+            this.updateNewsSection('breakingNews', newsData.breaking, 'No breaking intelligence available');
+            this.updateNewsSection('geopoliticalNews', newsData.geopolitical, 'No geopolitical updates available');
+            this.updateNewsSection('securityNews', newsData.security, 'No security briefings available');
+        } catch (error) {
+            console.error('Error loading news:', error);
+            this.showNewsError();
+        }
     }
 
-    async loadNewsForCategory(category) {
-        // Removed - using real data only
+    updateNewsSection(sectionId, articles, emptyMessage) {
+        const section = document.getElementById(sectionId);
+        if (!section) return;
+
+        if (!articles || articles.length === 0) {
+            section.innerHTML = `<div class="news-loading">${emptyMessage}</div>`;
+            return;
+        }
+
+        section.innerHTML = articles.map(article => `
+            <div class="news-item">
+                <div class="news-title">${article.title}</div>
+                <div class="news-summary">${article.description || 'No description available'}</div>
+                <div class="news-meta">
+                    <span class="news-source">${article.source?.name || 'Unknown Source'}</span>
+                    <span class="news-time">${this.formatNewsTime(article.publishedAt)}</span>
+                </div>
+            </div>
+        `).join('');
     }
 
-    generateSampleNews(keywords) {
-        // Removed - no hardcoded news
-        return [];
-    }
-
-    getRandomTime() {
-        // Removed - no sample news
-        return '';
+    formatNewsTime(publishedAt) {
+        if (!publishedAt) return 'Unknown time';
+        
+        const now = new Date();
+        const publishTime = new Date(publishedAt);
+        const diffMs = now - publishTime;
+        const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+        const diffMinutes = Math.floor(diffMs / (1000 * 60));
+        
+        if (diffMinutes < 60) {
+            return `${diffMinutes}m ago`;
+        } else if (diffHours < 24) {
+            return `${diffHours}h ago`;
+        } else {
+            return publishTime.toLocaleDateString();
+        }
     }
 
     showNewsError() {
-        // Removed - better to show nothing than fake news
+        const sections = ['breakingNews', 'geopoliticalNews', 'securityNews'];
+        sections.forEach(sectionId => {
+            const section = document.getElementById(sectionId);
+            if (section) {
+                section.innerHTML = '<div class="news-loading">Unable to load intelligence data</div>';
+            }
+        });
     }
 }
 
