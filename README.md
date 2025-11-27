@@ -2,6 +2,8 @@
 
 A real-time global conflict tracker powered by AI analysis, news monitoring, and risk assessment.
 
+Also check out https://github.com/neooriginal/WorldEndArchive
+
 ## Features
 
 - **Real-time Conflict Monitoring**: Live tracking of global conflicts and tensions
