@@ -7,8 +7,7 @@ const socketIo = require('socket.io');
 const path = require('path');
 const rateLimit = require('express-rate-limit');
 const swaggerUi = require('swagger-ui-express');
-const { Query, ID } = require('node-appwrite');
-const { databases, DATABASE_ID, COLLECTIONS, initializeAppwriteDatabase, seedInitialData } = require('./appwrite-setup');
+const { initializeDB, run, get, all, db } = require('./db');
 
 dotenv.config();
 
@@ -142,8 +141,8 @@ const swaggerDocument = {
                                 schema: {
                                     type: 'object',
                                     properties: {
-                                        breaking: { 
-                                            type: 'array', 
+                                        breaking: {
+                                            type: 'array',
                                             items: {
                                                 type: 'object',
                                                 properties: {
@@ -154,8 +153,8 @@ const swaggerDocument = {
                                                 }
                                             }
                                         },
-                                        geopolitical: { 
-                                            type: 'array', 
+                                        geopolitical: {
+                                            type: 'array',
                                             items: {
                                                 type: 'object',
                                                 properties: {
@@ -166,8 +165,8 @@ const swaggerDocument = {
                                                 }
                                             }
                                         },
-                                        security: { 
-                                            type: 'array', 
+                                        security: {
+                                            type: 'array',
                                             items: {
                                                 type: 'object',
                                                 properties: {
@@ -226,14 +225,14 @@ async function getNews() {
         }
 
         const response = await fetch(`https://newsapi.org/v2/top-headlines?category=general&pageSize=50&apiKey=${process.env.NEWS_API_KEY}`);
-        
+
         if (!response.ok) {
             console.log('News API request failed');
             return null;
         }
-        
+
         const data = await response.json();
-        
+
         if (!data.articles || data.articles.length === 0) {
             console.log('No articles found');
             return null;
@@ -242,34 +241,34 @@ async function getNews() {
         // Better filtering for high-quality conflict news
         const relevantArticles = data.articles.filter(article => {
             if (!article.title || !article.description) return false;
-            
+
             const text = (article.title + ' ' + article.description).toLowerCase();
-            
+
             // High priority conflict keywords
             const highPriorityKeywords = [
                 'war', 'warfare', 'conflict', 'invasion', 'attack', 'bombing', 'missile',
                 'sanctions', 'military', 'troops', 'forces', 'violence', 'terrorism',
                 'ceasefire', 'peace talks', 'diplomatic crisis', 'nuclear', 'weapons'
             ];
-            
+
             // Medium priority keywords
             const mediumPriorityKeywords = [
                 'tension', 'crisis', 'protest', 'election', 'coup', 'government',
                 'security', 'threat', 'intelligence', 'cyber attack', 'embargo'
             ];
-            
+
             // Exclude sports, entertainment, etc.
             const excludeKeywords = [
                 'sport', 'football', 'basketball', 'movie', 'celebrity', 'music',
                 'weather', 'stock market', 'earnings', 'technology review'
             ];
-            
+
             const hasExcluded = excludeKeywords.some(keyword => text.includes(keyword));
             if (hasExcluded) return false;
-            
+
             const hasHighPriority = highPriorityKeywords.some(keyword => text.includes(keyword));
             const hasMediumPriority = mediumPriorityKeywords.some(keyword => text.includes(keyword));
-            
+
             return hasHighPriority || hasMediumPriority;
         });
 
@@ -281,13 +280,12 @@ async function getNews() {
     }
 }
 
-async function initializeDB() {
+async function init() {
     try {
-        await initializeAppwriteDatabase();
-        await seedInitialData();
-        console.log('Appwrite database connection successful');
+        await initializeDB();
+        console.log('SQLite database initialized');
     } catch (error) {
-        console.error('Failed to initialize Appwrite database:', error.message);
+        console.error('Failed to initialize SQLite database:', error.message);
     }
 }
 
@@ -295,7 +293,7 @@ async function analyzeGlobalConflicts(newsArticles) {
     try {
         const currentDate = new Date().toISOString().split('T')[0];
         const currentTime = new Date().toLocaleString();
-        
+
         const prompt = `Today is ${currentDate} at ${currentTime}. You are analyzing breaking news to assess global conflict risks. Base your analysis STRICTLY on the provided news articles and current global context.
 
 Recent breaking news:
@@ -347,13 +345,13 @@ Focus on countries mentioned in the news articles. For major powers (US, China, 
         });
 
         let responseContent = completion.choices[0].message.content.trim();
-        
+
         // Extract JSON from response if it contains extra text
         const jsonMatch = responseContent.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
             responseContent = jsonMatch[0];
         }
-        
+
         const result = JSON.parse(responseContent);
         lastAIUpdate = Date.now();
         return result;
@@ -365,22 +363,19 @@ Focus on countries mentioned in the news articles. For major powers (US, China, 
 
 async function saveGlobalAnalysis(analysis) {
     try {
-        const data = await databases.createDocument(
-            DATABASE_ID,
-            COLLECTIONS.GLOBAL_ANALYSIS,
-            ID.unique(),
-            {
-                overall_risk_level: analysis.overall_risk_level,
-                active_conflicts_count: analysis.countries.reduce((total, country) => total + country.conflicts.length, 0),
-                high_risk_countries_count: analysis.countries.filter(c => c.risk_level > 60).length,
-                news_summary: analysis.news_summary,
-                ai_reasoning: analysis.ai_reasoning,
-                key_events: analysis.key_events,
-                trend_direction: analysis.trend_direction
-            }
+        await run(
+            'INSERT INTO global_analysis (overall_risk_level, active_conflicts_count, high_risk_countries_count, news_summary, ai_reasoning, key_events, trend_direction) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [
+                analysis.overall_risk_level,
+                analysis.countries.reduce((total, country) => total + country.conflicts.length, 0),
+                analysis.countries.filter(c => c.risk_level > 60).length,
+                analysis.news_summary,
+                analysis.ai_reasoning,
+                JSON.stringify(analysis.key_events),
+                analysis.trend_direction
+            ]
         );
-
-        return data;
+        return true;
     } catch (error) {
         console.error('Error saving global analysis:', error.message);
         return null;
@@ -391,72 +386,40 @@ async function updateCountriesAndConflicts(analysis) {
     try {
         for (const countryData of analysis.countries) {
             // Find existing country by iso_code
-            const existingCountries = await databases.listDocuments(
-                DATABASE_ID,
-                COLLECTIONS.COUNTRIES,
-                [Query.equal('iso_code', countryData.iso_code)]
-            );
+            const country = await get('SELECT id FROM countries WHERE iso_code = ?', [countryData.iso_code]);
 
             let countryId;
-            if (existingCountries.total > 0) {
-                // Update existing country
-                const country = existingCountries.documents[0];
-                countryId = country.$id;
-                await databases.updateDocument(
-                    DATABASE_ID,
-                    COLLECTIONS.COUNTRIES,
-                    countryId,
-                    {
-                        current_risk_level: countryData.risk_level,
-                        last_updated: new Date().toISOString()
-                    }
+            if (country) {
+                countryId = country.id;
+                await run(
+                    'UPDATE countries SET current_risk_level = ?, last_updated = ? WHERE id = ?',
+                    [countryData.risk_level, new Date().toISOString(), countryId]
                 );
             } else {
-                // Create new country
-                const newCountry = await databases.createDocument(
-                    DATABASE_ID,
-                    COLLECTIONS.COUNTRIES,
-                    ID.unique(),
-                    {
-                    name: countryData.name,
-                    iso_code: countryData.iso_code,
-                    current_risk_level: countryData.risk_level,
-                    last_updated: new Date().toISOString()
-                    }
+                const result = await run(
+                    'INSERT INTO countries (name, iso_code, current_risk_level, last_updated) VALUES (?, ?, ?, ?)',
+                    [countryData.name, countryData.iso_code, countryData.risk_level, new Date().toISOString()]
                 );
-                countryId = newCountry.$id;
+                countryId = result.lastID;
             }
 
             if (countryData.conflicts) {
                 // Delete existing active conflicts for this country
-                const existingConflicts = await databases.listDocuments(
-                    DATABASE_ID,
-                    COLLECTIONS.CONFLICTS,
-                    [
-                        Query.equal('country_id', countryId),
-                        Query.equal('status', 'active')
-                    ]
-                );
-
-                for (const conflict of existingConflicts.documents) {
-                    await databases.deleteDocument(DATABASE_ID, COLLECTIONS.CONFLICTS, conflict.$id);
-                }
+                await run('DELETE FROM conflicts WHERE country_id = ? AND status = ?', [countryId, 'active']);
 
                 // Add new conflicts
                 for (const conflict of countryData.conflicts) {
-                    await databases.createDocument(
-                        DATABASE_ID,
-                        COLLECTIONS.CONFLICTS,
-                        ID.unique(),
-                        {
-                            country_id: countryId,
-                            title: conflict.title,
-                            description: conflict.description,
-                            severity: conflict.severity,
-                            conflict_type: conflict.type,
-                            risk_score: conflict.risk_score,
-                            status: 'active'
-                        }
+                    await run(
+                        'INSERT INTO conflicts (country_id, title, description, severity, conflict_type, risk_score, status) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                        [
+                            countryId,
+                            conflict.title,
+                            conflict.description,
+                            conflict.severity,
+                            conflict.type,
+                            conflict.risk_score,
+                            'active'
+                        ]
                     );
                 }
             }
@@ -469,13 +432,8 @@ async function updateCountriesAndConflicts(analysis) {
 // API endpoints
 app.get('/api/countries', async (req, res) => {
     try {
-        const result = await databases.listDocuments(
-            DATABASE_ID,
-            COLLECTIONS.COUNTRIES,
-            [Query.orderDesc('current_risk_level')]
-        );
-
-        res.json(result.documents);
+        const countries = await all('SELECT * FROM countries ORDER BY current_risk_level DESC');
+        res.json(countries);
     } catch (error) {
         console.error('Error fetching countries:', error.message);
         res.status(500).json({ error: 'Failed to fetch countries' });
@@ -484,41 +442,14 @@ app.get('/api/countries', async (req, res) => {
 
 app.get('/api/conflicts', async (req, res) => {
     try {
-        const conflicts = await databases.listDocuments(
-            DATABASE_ID,
-            COLLECTIONS.CONFLICTS,
-            [
-                Query.equal('status', 'active'),
-                Query.orderDesc('severity')
-            ]
-        );
-
-        // Get country details for each conflict
-        const formattedData = [];
-        for (const conflict of conflicts.documents) {
-            try {
-                const country = await databases.getDocument(
-                    DATABASE_ID,
-                    COLLECTIONS.COUNTRIES,
-                    conflict.country_id
-                );
-                
-                formattedData.push({
-                    ...conflict,
-                    country_name: country.name,
-                    iso_code: country.iso_code
-                });
-            } catch (countryError) {
-                // If country not found, include conflict without country details
-                formattedData.push({
-            ...conflict,
-                    country_name: 'Unknown',
-                    iso_code: 'UNK'
-                });
-            }
-        }
-        
-        res.json(formattedData);
+        const conflicts = await all(`
+            SELECT c.*, co.name as country_name, co.iso_code 
+            FROM conflicts c 
+            JOIN countries co ON c.country_id = co.id 
+            WHERE c.status = 'active' 
+            ORDER BY c.severity DESC
+        `);
+        res.json(conflicts);
     } catch (error) {
         console.error('Error fetching conflicts:', error.message);
         res.status(500).json({ error: 'Failed to fetch conflicts' });
@@ -527,20 +458,18 @@ app.get('/api/conflicts', async (req, res) => {
 
 app.get('/api/global-analysis', async (req, res) => {
     try {
-        const result = await databases.listDocuments(
-            DATABASE_ID,
-            COLLECTIONS.GLOBAL_ANALYSIS,
-            [
-                Query.orderDesc('$createdAt'),
-                Query.limit(1)
-            ]
-        );
+        const analysis = await get('SELECT * FROM global_analysis ORDER BY created_at DESC LIMIT 1');
 
-        if (result.documents.length === 0) {
+        if (!analysis) {
             return res.status(404).json({ error: 'No global analysis found' });
         }
 
-        res.json(result.documents[0]);
+        // Parse JSON fields
+        if (analysis.key_events) {
+            analysis.key_events = JSON.parse(analysis.key_events);
+        }
+
+        res.json(analysis);
     } catch (error) {
         console.error('Error fetching global analysis:', error.message);
         res.status(500).json({ error: 'Failed to fetch global analysis' });
@@ -551,8 +480,8 @@ app.get('/api/historical-analysis', async (req, res) => {
     try {
         const period = req.query.period || '24h';
         let timeFilter;
-        
-        switch(period) {
+
+        switch (period) {
             case '24h':
                 timeFilter = new Date(Date.now() - 24 * 60 * 60 * 1000);
                 break;
@@ -569,22 +498,15 @@ app.get('/api/historical-analysis', async (req, res) => {
                 timeFilter = new Date(Date.now() - 24 * 60 * 60 * 1000);
         }
 
-        const result = await databases.listDocuments(
-            DATABASE_ID,
-            COLLECTIONS.GLOBAL_ANALYSIS,
-            [
-                Query.greaterThanEqual('$createdAt', timeFilter.toISOString()),
-                Query.orderAsc('$createdAt'),
-                Query.select(['overall_risk_level', '$createdAt'])
-            ]
+        const analyses = await all(
+            'SELECT overall_risk_level, created_at FROM global_analysis WHERE created_at >= ? ORDER BY created_at ASC',
+            [timeFilter.toISOString()]
         );
 
-        const formattedData = result.documents.map(doc => ({
+        res.json(analyses.map(doc => ({
             overall_risk_level: doc.overall_risk_level,
-            created_at: doc.$createdAt
-        }));
-
-        res.json(formattedData);
+            created_at: doc.created_at
+        })));
     } catch (error) {
         console.error('Error fetching historical analysis:', error.message);
         res.status(500).json({ error: 'Failed to fetch historical analysis' });
@@ -606,7 +528,7 @@ app.post('/api/trigger-analysis', async (req, res) => {
 app.get('/api/news', async (req, res) => {
     try {
         const news = await getNews();
-        
+
         if (!news || news.length === 0) {
             return res.json({
                 breaking: [],
@@ -622,20 +544,20 @@ app.get('/api/news', async (req, res) => {
 
         news.forEach(article => {
             const text = (article.title + ' ' + (article.description || '')).toLowerCase();
-            
+
             // Breaking news keywords (urgent/immediate events)
             const breakingKeywords = ['breaking', 'urgent', 'attack', 'bombing', 'invasion', 'nuclear', 'emergency'];
-            
+
             // Geopolitical keywords
             const geopoliticalKeywords = ['diplomatic', 'sanctions', 'trade', 'relations', 'treaty', 'summit', 'election', 'government'];
-            
+
             // Security keywords
             const securityKeywords = ['security', 'terrorism', 'cyber', 'intelligence', 'threat', 'military', 'defense'];
-            
+
             const hasBreaking = breakingKeywords.some(keyword => text.includes(keyword));
             const hasGeopolitical = geopoliticalKeywords.some(keyword => text.includes(keyword));
             const hasSecurity = securityKeywords.some(keyword => text.includes(keyword));
-            
+
             // Assign to category based on priority
             if (hasBreaking && breaking.length < 5) {
                 breaking.push(article);
@@ -669,7 +591,7 @@ app.get('/api/news', async (req, res) => {
 // Socket.io connection handling
 io.on('connection', (socket) => {
     console.log('Client connected');
-    
+
     socket.on('disconnect', () => {
         console.log('Client disconnected');
     });
@@ -686,7 +608,7 @@ async function performGlobalAnalysis() {
 
         console.log('Starting global conflict analysis...');
         const newsArticles = await getNews();
-        
+
         if (!newsArticles || newsArticles.length === 0) {
             console.log('No current news available for analysis - skipping this cycle');
             return;
@@ -716,12 +638,12 @@ async function performGlobalAnalysis() {
 }
 
 async function main() {
-    await initializeDB();
-    
+    await init();
+
     // Run analysis immediately on startup
     console.log('Running initial global analysis...');
     await performGlobalAnalysis();
-    
+
     // Then run every 6 hours
     setInterval(performGlobalAnalysis, 6 * 60 * 60 * 1000);
 }
